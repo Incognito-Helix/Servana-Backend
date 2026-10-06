@@ -5,10 +5,52 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+model User {
+  id String @id @default(uuid())
+  firstName String
+  lastName String
+  email String @unique // always stored lowercase, enforced in the service
+  passwordHash String? // null for Google accounts
+  googleId String? @unique // null for email and password accounts
+  role Role
+  phoneNumber String? // optional for customers, vendors use the phone on their profile
+  emailVerified Boolean @default(false)
+  status Status @default(active)
+  termsVersion String? // null only for the seeded admin
+  termsAcceptedAt DateTime? // null only for the seeded admin
+  createdAt DateTime @default(now())
+
+
+  // FUTURE (Zone model): zoneId String? and zone Zone? relation, the customer's saved search location
+  // FUTURE (Auth step): authTokens AuthToken[], hashed email OTPs and password reset tokens
+  // FUTURE (Auth step): recentLocations UserRecentLocation[], last 3 locations per customer
+  // FUTURE (Vendor step): vendorProfile VendorProfile?, one profile per vendor
+  // FUTURE (Reviews step): reviews Review[], written by customers
+  // FUTURE (Contact step): contactReveals ContactReveal[]
+  // FUTURE (Payments step): payments Payment[]
+  // FUTURE (Dashboard step): profileEvents ProfileEvent[], viewerId is nullable for visitors
+  // FUTURE (Admin step): auditLogs AuditLog[], only for admin users
+  // FUTURE (PRD 13.1): NGO affiliation tables will link here
+
+
+  @@map("users")
+}
+
+enum Role {
+  customer
+  vendor
+  admin
+}
+
+enum Status {
+  active
+  suspended
 }
