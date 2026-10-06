@@ -14,20 +14,21 @@ datasource db {
 }
 
 model User {
-  id String @id @default(uuid())
-  firstName String
-  lastName String
-  email String @unique // always stored lowercase, enforced in the service
-  passwordHash String? // null for Google accounts
-  googleId String? @unique // null for email and password accounts
-  role Role
-  phoneNumber String? // optional for customers, vendors use the phone on their profile
-  emailVerified Boolean @default(false)
-  status Status @default(active)
-  termsVersion String? // null only for the seeded admin
+  id              String    @id @default(uuid())
+  firstName       String
+  lastName        String
+  email           String    @unique // always stored lowercase, enforced in the service
+  passwordHash    String? // null for Google accounts
+  googleId        String?   @unique // null for email and password accounts
+  role            Role
+  phoneNumber     String? // optional for customers, vendors use the phone on their profile
+  emailVerified   Boolean   @default(false)
+  status          Status    @default(active)
+  termsVersion    String? // null only for the seeded admin
   termsAcceptedAt DateTime? // null only for the seeded admin
-  createdAt DateTime @default(now())
-
+  createdAt       DateTime  @default(now())
+  zoneId          String?
+  zone            Zone?     @relation(fields: [zoneId], references: [id])
 
   // FUTURE (Zone model): zoneId String? and zone Zone? relation, the customer's saved search location
   // FUTURE (Auth step): authTokens AuthToken[], hashed email OTPs and password reset tokens
@@ -39,7 +40,6 @@ model User {
   // FUTURE (Dashboard step): profileEvents ProfileEvent[], viewerId is nullable for visitors
   // FUTURE (Admin step): auditLogs AuditLog[], only for admin users
   // FUTURE (PRD 13.1): NGO affiliation tables will link here
-
 
   @@map("users")
 }
@@ -53,4 +53,34 @@ enum Role {
 enum Status {
   active
   suspended
+}
+
+model Zone {
+  id                   String  @id @default(uuid())
+  state                String
+  city                 String
+  name                 String
+  slug                 String  @unique
+  centerLatitude       Float
+  centerLongitude      Float
+  isActive             Boolean @default(true)
+  boostPriceMultiplier Decimal @default(1.0) @db.Decimal(4, 2)
+
+  users User[]
+
+  @@map("zones")
+}
+
+model Category {
+  id       String  @id @default(uuid())
+  name     String
+  slug     String  @unique
+  icon     String?
+  isActive Boolean @default(true)
+  parentId String?
+
+  parent   Category?  @relation("categoryTree", fields: [parentId], references: [id])
+  children Category[] @relation("categoryTree")
+
+  @@map("categories")
 }
