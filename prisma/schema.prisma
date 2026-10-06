@@ -42,6 +42,7 @@ model User {
   // FUTURE (PRD 13.1): NGO affiliation tables will link here
   authTokens          AuthToken[]
   userRecentLocations UserRecentLocation[]
+  vendorProfile       VendorProfile?
 
   @@map("users")
 }
@@ -70,6 +71,7 @@ model Zone {
 
   users               User[]
   userRecentLocations UserRecentLocation[]
+  vendorProfile       VendorProfile[]
 
   @@map("zones")
 }
@@ -82,8 +84,9 @@ model Category {
   isActive Boolean @default(true)
   parentId String?
 
-  parent   Category?  @relation("categoryTree", fields: [parentId], references: [id])
-  children Category[] @relation("categoryTree")
+  parent           Category?        @relation("categoryTree", fields: [parentId], references: [id])
+  children         Category[]       @relation("categoryTree")
+  vendorCategories VendorCategory[]
 
   @@map("categories")
 }
@@ -113,11 +116,155 @@ model UserRecentLocation {
   id     String   @id @default(uuid())
   userId String
   zoneId String
-  userAt DateTime @default(now())
+  usedAt DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id])
   zone Zone @relation(fields: [zoneId], references: [id], onDelete: Cascade)
 
-  @@index([userId, zoneId])
+  @@unique([userId, zoneId])
   @@map("user_recent_locations")
+}
+
+enum ProfileStatus {
+  draft
+  pending
+  approved
+  rejected
+  suspended
+}
+
+enum SocialPlatform {
+  instagram
+  tiktok
+  x
+  facebook
+  other
+}
+
+enum VerificationStatus {
+  pending
+  passed
+  failed
+}
+
+model VendorProfile {
+  id                String        @id @default(uuid())
+  userId            String        @unique
+  slug              String        @unique
+  businessName      String
+  about             String?
+  phone             String?       @unique
+  whatsapp          String?
+  state             String?
+  city              String?
+  zoneId            String?
+  latitude          Float?
+  longitude         Float?
+  streetAddress     String?
+  offersHomeService Boolean       @default(false)
+  serviceRadiusKm   Int?
+  worksRemotely     Boolean       @default(false)
+  coverImageUrl     String?
+  profileImageUrl   String?
+  onboardingStep    Int           @default(1)
+  status            ProfileStatus @default(draft)
+  rejectionReason   String?
+  isVerified        Boolean       @default(false)
+  avgRating         Decimal       @default(0.0) @db.Decimal(3, 2)
+  reviewCount       Int           @default(0)
+  locationChangedAt DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  zone            Zone?            @relation(fields: [zoneId], references: [id])
+  categories      VendorCategory[]
+  socialLinks     SocialLink[]
+  verifications   Verification[]
+  services        Service[]
+  portfolioImages PortfolioImage[]
+  workingHours    WorkingHours[]
+
+  @@index([latitude, longitude])
+  @@index([zoneId])
+  @@map("vendor_profiles")
+}
+
+model VendorCategory {
+  id         String  @id @default(uuid())
+  profileId  String
+  categoryId String
+  isPrimary  Boolean @default(false)
+
+  profile  VendorProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  category Category      @relation(fields: [categoryId], references: [id])
+
+  @@unique([profileId, categoryId])
+  @@map("vendor_categories")
+}
+
+model SocialLink {
+  id        String         @id @default(uuid())
+  profileId String
+  platform  SocialPlatform
+  url       String
+
+  profile VendorProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@map("social_links")
+}
+
+model Verification {
+  id           String             @id @default(uuid())
+  profileId    String
+  ninLast4     String             @db.VarChar(4)
+  status       VerificationStatus
+  failedReason String?
+  checkedAt    DateTime           @default(now())
+
+  profile VendorProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId, checkedAt])
+  @@map("verifications")
+}
+
+model Service {
+  id          String  @id @default(uuid())
+  profileId   String
+  name        String
+  priceMin    Int
+  priceMax    Int?
+  description String?
+
+  profile VendorProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@map("services")
+}
+
+model PortfolioImage {
+  id        String @id @default(uuid())
+  profileId String
+  url       String
+  sortOrder Int    @default(0)
+
+  profile VendorProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+  @@map("portfolio_images")
+}
+
+model WorkingHours {
+  id        String  @id @default(uuid())
+  profileId String
+  dayOfWeek Int
+  openTime  String?
+  closeTime String?
+  isClosed  Boolean @default(false)
+
+  profile VendorProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, dayOfWeek])
+  @@map("working_hours")
 }
