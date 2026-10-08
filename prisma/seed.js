@@ -89,18 +89,22 @@ const categories = [
 			{ name: "Lashes", slug: "lashes" },
 			{ name: "Barbing", slug: "barbing" },
 		],
+	},
 
+	{
 		name: "Events",
 		slug: "events",
 		icon: "",
 		children: [
 			{ name: "Event planning", slug: "event-planning" },
 			{ name: "Decoration", slug: "decoration" },
-			{ name: "Djs", slug: "djs" },
-			{ name: "MSc", slug: "mcs" },
+			{ name: "DJs", slug: "djs" },
+			{ name: "MCs", slug: "mcs" },
 			{ name: "Rentals", slug: "rentals" },
 		],
+	},
 
+	{
 		name: "Food",
 		slug: "food",
 		icon: "",
@@ -109,7 +113,9 @@ const categories = [
 			{ name: "Small chops", slug: "small-chops" },
 			{ name: "Cakes", slug: "cakes" },
 		],
+	},
 
+	{
 		name: "Home",
 		slug: "home",
 		icon: "",
@@ -117,7 +123,8 @@ const categories = [
 			{ name: "Cleaning", slug: "cleaning" },
 			{ name: "Laundry", slug: "laundry" },
 		],
-
+	},
+	{
 		name: "Tech and creative",
 		slug: "tech-and-creative",
 		icon: "",
@@ -146,11 +153,10 @@ const main = async () => {
 		const { children, ...parentdData } = category;
 
 		const parent = await prisma.category.upsert({
-				where: { slug: parentdData.slug },
-				update: parentdData,
-				create: parentdData,
-			});
-
+			where: { slug: parentdData.slug },
+			update: parentdData,
+			create: parentdData,
+		});
 
 		for (const child of children) {
 			await prisma.category.upsert({
@@ -159,9 +165,8 @@ const main = async () => {
 				create: { ...child, parentId: parent.id },
 			});
 		}
-
-		console.log("seeded category sussessfully");
 	}
+	console.log("seeded category sussessfully");
 };
 
 main()
