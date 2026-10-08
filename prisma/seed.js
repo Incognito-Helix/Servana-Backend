@@ -1,4 +1,6 @@
 import { PrismaClient } from "@prisma/client";
+import "dotenv/config";
+import bcrypt from "bcrypt";
 
 const prisma = new PrismaClient();
 
@@ -167,6 +169,30 @@ const main = async () => {
 		}
 	}
 	console.log("seeded category sussessfully");
+
+	const { ADMIN_EMAIL, ADMIN_PASSWORD } = process.env;
+
+	if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
+		throw new Error("ADMIN_EMAIL and ADMIN_PASSWORD must be set in .env");
+	}
+
+	const email = ADMIN_EMAIL.toLowerCase();
+	const passwordHash = await bcrypt.hash(ADMIN_PASSWORD, 12);
+
+	await prisma.user.upsert({
+		where: { email },
+		update: {},
+		create: {
+			firstName: "Servana",
+			lastName: "Admin",
+			email,
+			passwordHash,
+			role: "admin",
+			emailVerified: true,
+		},
+	});
+
+	console.log("seeded admin sussessfully");
 };
 
 main()
