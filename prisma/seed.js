@@ -77,6 +77,60 @@ const zones = [
 	},
 ];
 
+const categories = [
+	{
+		name: "Beauty",
+		slug: "beauty",
+		icon: "",
+		children: [
+			{ name: "Hair", slug: "hair" },
+			{ name: "Makeup", slug: "makeup" },
+			{ name: "Nails", slug: "nails" },
+			{ name: "Lashes", slug: "lashes" },
+			{ name: "Barbing", slug: "barbing" },
+		],
+
+		name: "Events",
+		slug: "events",
+		icon: "",
+		children: [
+			{ name: "Event planning", slug: "event-planning" },
+			{ name: "Decoration", slug: "decoration" },
+			{ name: "Djs", slug: "djs" },
+			{ name: "MSc", slug: "mcs" },
+			{ name: "Rentals", slug: "rentals" },
+		],
+
+		name: "Food",
+		slug: "food",
+		icon: "",
+		children: [
+			{ name: "Catering", slug: "catering" },
+			{ name: "Small chops", slug: "small-chops" },
+			{ name: "Cakes", slug: "cakes" },
+		],
+
+		name: "Home",
+		slug: "home",
+		icon: "",
+		children: [
+			{ name: "Cleaning", slug: "cleaning" },
+			{ name: "Laundry", slug: "laundry" },
+		],
+
+		name: "Tech and creative",
+		slug: "tech-and-creative",
+		icon: "",
+		children: [
+			{ name: "Design", slug: "design" },
+			{ name: "Writing", slug: "writing" },
+			{ name: "Photography", slug: "photography" },
+			{ name: "Tutoring", slug: "tutoring" },
+			{ name: "Content creation", slug: "content-creation" },
+		],
+	},
+];
+
 const main = async () => {
 	for (const zone of zones) {
 		await prisma.zone.upsert({
@@ -86,13 +140,28 @@ const main = async () => {
 		});
 	}
 
-	console.log(`seeded successfully`)
+	console.log(`seeded successfully`);
 
-	// await prisma.category.upsert({
-	// 	where: {},
-	// 	update: {},
-	// 	create: {},
-	// });
+	for (const category of categories) {
+		const { children, ...parentdData } = category;
+
+		const parent = await prisma.category.upsert({
+				where: { slug: parentdData.slug },
+				update: parentdData,
+				create: parentdData,
+			});
+
+
+		for (const child of children) {
+			await prisma.category.upsert({
+				where: { slug: child.slug },
+				update: { ...child, parentId: parent.id },
+				create: { ...child, parentId: parent.id },
+			});
+		}
+
+		console.log("seeded category sussessfully");
+	}
 };
 
 main()
