@@ -118,8 +118,8 @@ model UserRecentLocation {
   zoneId String
   usedAt DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id])
-  zone Zone @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  zone Zone @relation(fields: [zoneId], references: [id])
 
   @@unique([userId, zoneId])
   @@map("user_recent_locations")
