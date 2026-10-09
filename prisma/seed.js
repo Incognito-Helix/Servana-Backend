@@ -83,7 +83,6 @@ const categories = [
 	{
 		name: "Beauty",
 		slug: "beauty",
-		icon: "",
 		children: [
 			{ name: "Hair", slug: "hair" },
 			{ name: "Makeup", slug: "makeup" },
@@ -96,7 +95,6 @@ const categories = [
 	{
 		name: "Events",
 		slug: "events",
-		icon: "",
 		children: [
 			{ name: "Event planning", slug: "event-planning" },
 			{ name: "Decoration", slug: "decoration" },
@@ -109,7 +107,6 @@ const categories = [
 	{
 		name: "Food",
 		slug: "food",
-		icon: "",
 		children: [
 			{ name: "Catering", slug: "catering" },
 			{ name: "Small chops", slug: "small-chops" },
@@ -120,7 +117,6 @@ const categories = [
 	{
 		name: "Home",
 		slug: "home",
-		icon: "",
 		children: [
 			{ name: "Cleaning", slug: "cleaning" },
 			{ name: "Laundry", slug: "laundry" },
@@ -129,13 +125,14 @@ const categories = [
 	{
 		name: "Tech and creative",
 		slug: "tech-and-creative",
-		icon: "",
+
 		children: [
 			{ name: "Design", slug: "design" },
 			{ name: "Writing", slug: "writing" },
 			{ name: "Photography", slug: "photography" },
 			{ name: "Tutoring", slug: "tutoring" },
 			{ name: "Content creation", slug: "content-creation" },
+			{ name: "Tech", slug: "tech" },
 		],
 	},
 ];
