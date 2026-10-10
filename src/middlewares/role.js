@@ -2,20 +2,22 @@ const requireRole = (...allowedRoles) => {
   return (req, res, next) => {
     // The auth middleware should attach the authenticated user to req.user.
     if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        message: "Authentication required.",
-      });
+      const error = new Error("Authentication required.");
+      error.status = 401;
+      error.code = "UNAUTHORIZED";
+      return next(error);
     }
 
     if (!allowedRoles.includes(req.user.role)) {
-      return res.status(403).json({
-        success: false,
-        message: "You do not have permission to access this resource.",
-      });
+      const error = new Error(
+        "you do not have permission to access this resource",
+      );
+      error.status = 403;
+      error.code = "FORBIDDEN";
+      return next(error);
     }
 
-    next();
+    return next();
   };
 };
 
