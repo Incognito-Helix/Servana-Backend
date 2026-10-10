@@ -1,4 +1,3 @@
-
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import prisma from "../config/prisma.js";
@@ -19,10 +18,7 @@ const login = async (req, res, next) => {
       return next(error);
     }
 
-    const passwordMatches = await bcrypt.compare(
-      password,
-      user.passwordHash
-    );
+    const passwordMatches = await bcrypt.compare(password, user.passwordHash);
 
     if (!passwordMatches) {
       const error = new Error("Invalid email or password.");
@@ -43,7 +39,7 @@ const login = async (req, res, next) => {
       process.env.JWT_SECRET,
       {
         expiresIn: process.env.JWT_EXPIRES_IN || "7d",
-      }
+      },
     );
 
     return res.status(200).json({

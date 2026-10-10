@@ -1,4 +1,3 @@
-
 import jwt from "jsonwebtoken";
 
 const auth = (req, res, next) => {
@@ -27,11 +26,7 @@ const auth = (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    if (
-      typeof decoded === "string" ||
-      !decoded.userId ||
-      !decoded.role
-    ) {
+    if (typeof decoded === "string" || !decoded.userId || !decoded.role) {
       const error = new Error("Invalid authentication token.");
       error.status = 401;
       error.code = "INVALID_TOKEN";
