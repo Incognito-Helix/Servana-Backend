@@ -1,6 +1,6 @@
-import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
 import prisma from "../config/prisma.js";
+import bcrypt from "bcrypt";
+import { signToken } from "../services/token.service.js";
 
 const login = async (req, res, next) => {
   try {
@@ -27,20 +27,7 @@ const login = async (req, res, next) => {
       return next(error);
     }
 
-    if (!process.env.JWT_SECRET) {
-      throw new Error("JWT_SECRET is not configured.");
-    }
-
-    const token = jwt.sign(
-      {
-        userId: user.id,
-        role: user.role,
-      },
-      process.env.JWT_SECRET,
-      {
-        expiresIn: process.env.JWT_EXPIRES_IN || "7d",
-      },
-    );
+    const token = signToken(user);
 
     return res.status(200).json({
       success: true,
