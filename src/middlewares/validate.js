@@ -1,6 +1,6 @@
 const validate = (schema) => {
   return (req, res, next) => {
-    const { error } = schema.validate(req.body, {
+    const { error, value } = schema.validate(req.body, {
       abortEarly: false,
     });
 
@@ -11,6 +11,7 @@ const validate = (schema) => {
         const field = detail.path.join(".");
         fieldErrors[field] = detail.message;
       });
+
       const validationError = new Error("Validation Error");
       validationError.status = 400;
       validationError.code = "VALIDATION_ERROR";
@@ -18,6 +19,9 @@ const validate = (schema) => {
 
       return next(validationError);
     }
+
+    // Replace the request body with Joi's validated and cleaned values.
+    req.body = value;
 
     next();
   };
