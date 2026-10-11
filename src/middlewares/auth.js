@@ -9,44 +9,22 @@ const unauthorized = (message, code = "UNAUTHORIZED") => {
 };
 
 const auth = (req, res, next) => {
-  const authorization = req.headers.authorization;
+  const header = req.headers.authorization || "";
+  const [scheme, token] = header.split(" ");
 
-  if (!authorization || !authorization.startsWith("Bearer ")) {
+  if (scheme !== "Bearer" || !token) {
     return next(unauthorized("Authentication required."));
   }
 
-  const token = authorization.slice(7).trim();
-
-  if (!token) {
-    return next(unauthorized("Authentication token is required."));
-  }
-
   try {
-    const decoded = verifyToken(token);
-
-    if (!decoded.userId || !decoded.role) {
-      return next(
-        unauthorized("Invalid authentication token.", "INVALID_TOKEN"),
-      );
+    const payload = verifyToken(token);
+    req.user = { id: payload.userId, role: payload.role };
+    next();
+  } catch (err) {
+    if (err instanceof jwt.TokenExpiredError) {
+      return next(unauthorized("Session expired.", "TOKEN_EXPIRED"));
     }
-
-    req.user = { id: decoded.userId, role: decoded.role };
-
-    return next();
-  } catch (error) {
-    if (error instanceof jwt.TokenExpiredError) {
-      return next(
-        unauthorized("Authentication token has expired.", "TOKEN_EXPIRED"),
-      );
-    }
-
-    if (error instanceof jwt.JsonWebTokenError) {
-      return next(
-        unauthorized("Invalid authentication token.", "INVALID_TOKEN"),
-      );
-    }
-
-    return next(error);
+    next(unauthorized("Invalid token."));
   }
 };
 
