@@ -1,14 +1,12 @@
+
 import express from "express";
-import {
-  sendEmailOtp,
-  verifyEmail,
-} from "../controllers/emailOtp.controller.js";
 import register from "../controllers/auth.controller.js";
+import validate from "../middlewares/validate.js";
+import registerSchema from "../validators/auth.validator.js";
 
 const router = express.Router();
 
-router.post("/register", register);
-router.post("/send-email-otp", sendEmailOtp);
-router.post("/verify-email", verifyEmail);
+router.post("/register", validate(registerSchema), register);
 
 export default router;
+

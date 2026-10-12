@@ -1,26 +1,31 @@
-const validate = (schema) => {
-  return (req, res, next) => {
-    const { error } = schema.validate(req.body, {
-      abortEarly: false,
-    });
 
-    if (error) {
-      const fieldErrors = {};
+const validate = (schema) => (req, res, next) => {
+  const { error, value } = schema.validate(req.body, {
+    abortEarly: false,
+    stripUnknown: true,
+  });
 
-      error.details.forEach((detail) => {
-        const field = detail.path.join(".");
+  if (error) {
+    const fieldErrors = {};
+
+    for (const detail of error.details) {
+      const field = detail.path.join(".");
+
+      if (!fieldErrors[field]) {
         fieldErrors[field] = detail.message;
-      });
-      const validationError = new Error("Validation Error");
-      validationError.status = 400;
-      validationError.code = "VALIDATION_ERROR";
-      validationError.fieldErrors = fieldErrors;
-
-      return next(validationError);
+      }
     }
 
-    next();
-  };
+    return res.status(400).json({
+      success: false,
+      code: "VALIDATION_ERROR",
+      message: "Validation Error",
+      fieldErrors,
+    });
+  }
+
+  req.body = value;
+  next();
 };
 
 export default validate;
