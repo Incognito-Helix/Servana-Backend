@@ -2,6 +2,13 @@ import prisma from "../config/prisma.js";
 import bcrypt from "bcrypt";
 import { signToken } from "../services/token.service.js";
 
+const invalidCredentials = () => {
+  const error = new Error("Invalid email or password.");
+  error.status = 401;
+  error.code = "INVALID_CREDENTIALS";
+  return error;
+};
+
 const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
@@ -11,19 +18,18 @@ const login = async (req, res, next) => {
       where: { email: normalizedEmail },
     });
 
-    if (!user) {
-      const error = new Error("Invalid email or password.");
-      error.status = 401;
-      error.code = "INVALID_CREDENTIALS";
-      return next(error);
+    const passwordMatches = user?.passwordHash
+      ? await bcrypt.compare(password, user.passwordHash)
+      : false;
+
+    if (!user || !passwordMatches) {
+      return next(invalidCredentials());
     }
 
-    const passwordMatches = await bcrypt.compare(password, user.passwordHash);
-
-    if (!passwordMatches) {
-      const error = new Error("Invalid email or password.");
-      error.status = 401;
-      error.code = "INVALID_CREDENTIALS";
+    if (user.status === "suspended") {
+      const error = new Error("This account has been suspended.");
+      error.status = 403;
+      error.code = "ACCOUNT_SUSPENDED";
       return next(error);
     }
 

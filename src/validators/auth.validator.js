@@ -20,7 +20,7 @@ const registerSchema = Joi.object({
     }),
   role: Joi.string().valid("customer", "vendor").required(),
 
-  acceptedTerms: Joi.boolean().valid(true).required(),
+  // acceptedTerms: Joi.boolean().valid(true).required(),
 }).options({
   abortEarly: false,
   stripUnknown: true,
