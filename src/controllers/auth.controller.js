@@ -1,6 +1,15 @@
 import bcrypt from "bcrypt";
 import prisma from "../config/prisma.js";
 
+const sendError = (next, message, statusCode, code, fieldErrors = {}) => {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  error.status = statusCode;
+  error.code = code;
+  error.fieldErrors = fieldErrors;
+  return next(error);
+};
+
 const register = async (req, res, next) => {
   try {
     const { firstName, lastName, email, password, role } = req.body;
@@ -13,23 +22,23 @@ const register = async (req, res, next) => {
       where: { email: normalizedEmail },
     });
 
-    if (existingUser) {
-      const error = new Error("Email is already registered.");
-      error.status = 409;
-      error.code = "EMAIL_ALREADY_EXISTS";
-      return next(error);
-    }
+    if (existingUser)
+      return sendError(
+        next,
+        "Email is already registered.",
+        409,
+        "EMAIL_ALREADY_EXISTS",
+      );
 
     //bcrypt only processes up to 72 bytes, so check the UTF-8 byte length.
-    if (Buffer.byteLength(password, "utf8") > 72) {
-      const error = new Error("Password must not exceed 72 bytes.");
-      error.status = 400;
-      error.code = "VALIDATION_ERROR";
-      error.fieldErrors = {
-        password: "Password must not exceed 72 bytes.",
-      };
-      return next(error);
-    }
+    if (Buffer.byteLength(password, "utf8") > 72)
+      return sendError(
+        next,
+        "Password must not exceed 72 bytes.",
+        400,
+        "VALIDATION_ERROR",
+        { password: "Password must not exceed 72 bytes." },
+      );
 
     const passwordHash = await bcrypt.hash(password, 12);
 
@@ -62,12 +71,13 @@ const register = async (req, res, next) => {
     });
   } catch (error) {
     //Handle a concurrent registration that wins the unique email race.
-    if (error.code === "P2002") {
-      const conflictError = new Error("Email is already registered.");
-      conflictError.status = 409;
-      conflictError.code = "EMAIL_ALREADY_EXISTS";
-      return next(conflictError);
-    }
+    if (error.code === "P2002")
+      return sendError(
+        next,
+        "Email is already registered.",
+        409,
+        "EMAIL_ALREADY_EXISTS",
+      );
     return next(error);
   }
 };

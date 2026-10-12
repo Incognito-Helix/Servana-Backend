@@ -1,4 +1,4 @@
-import prisma from "../config/prisma";
+import prisma from "../config/prisma.js";
 
 export const logout = (_req, res) => {
   res.status(200).json({ success: true, message: "Logged out" });
