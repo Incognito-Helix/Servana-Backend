@@ -24,7 +24,7 @@ const auth = (req, res, next) => {
     if (err instanceof jwt.TokenExpiredError) {
       return next(unauthorized("Session expired.", "TOKEN_EXPIRED"));
     }
-    next(unauthorized("Invalid token."));
+    next(unauthorized("Invalid token.", "INVALID_TOKEN"));
   }
 };
 
