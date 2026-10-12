@@ -34,20 +34,19 @@ const sendEmailOtp = async (req, res, next) => {
       });
     }
 
-    if (!process.env.SMTP_HOST || !process.env.SMTP_USER ||
-        !process.env.SMTP_PASS || !process.env.SMTP_FROM) {
+    if (
+      !process.env.SMTP_HOST ||
+      !process.env.SMTP_USER ||
+      !process.env.SMTP_PASS ||
+      !process.env.SMTP_FROM
+    ) {
       throw new Error("Email service is not configured.");
     }
 
     const otp = crypto.randomInt(100000, 1000000).toString();
-    const otpHash = crypto
-      .createHash("sha256")
-      .update(otp)
-      .digest("hex");
+    const otpHash = crypto.createHash("sha256").update(otp).digest("hex");
 
-    const expiresAt = new Date(
-      Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000
-    );
+    const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
 
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
@@ -142,10 +141,7 @@ const verifyEmail = async (req, res, next) => {
       });
     }
 
-    const otpHash = crypto
-      .createHash("sha256")
-      .update(otp)
-      .digest("hex");
+    const otpHash = crypto.createHash("sha256").update(otp).digest("hex");
 
     const now = new Date();
 

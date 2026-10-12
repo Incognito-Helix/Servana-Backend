@@ -12,14 +12,8 @@ const sendError = (next, message, statusCode, code, fieldErrors = {}) => {
 
 const register = async (req, res, next) => {
   try {
-    const {
-      firstName,
-      lastName,
-      email,
-      password,
-      role,
-      acceptedTerms,
-    } = req.body;
+    const { firstName, lastName, email, password, role, acceptedTerms } =
+      req.body;
 
     // Normalize registration data.
     const normalizedEmail = email.trim().toLowerCase();

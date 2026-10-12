@@ -4,8 +4,7 @@ const errorHandler = (err, req, res, next) => {
   const status = err.status || err.statusCode || 500;
 
   const code =
-    err.code ||
-    (status === 404 ? "NOT_FOUND" : "INTERNAL_SERVER_ERROR");
+    err.code || (status === 404 ? "NOT_FOUND" : "INTERNAL_SERVER_ERROR");
 
   res.status(status).json({
     success: false,

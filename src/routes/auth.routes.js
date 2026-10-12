@@ -2,7 +2,10 @@ import express from "express";
 import register from "../controllers/auth.controller.js";
 import login from "../controllers/login.controller.js";
 import { logout, me } from "../controllers/session.controller.js";
-import { sendEmailOtp, verifyEmail } from "../controllers/emailOtp.controller.js";
+import {
+  sendEmailOtp,
+  verifyEmail,
+} from "../controllers/emailOtp.controller.js";
 import auth from "../middlewares/auth.js";
 import validate from "../middlewares/validate.js";
 import registerSchema from "../validators/auth.validator.js";
