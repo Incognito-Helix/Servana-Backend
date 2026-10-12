@@ -14,8 +14,9 @@ app.get("/health", (req, res) => {
   });
 });
 
-//Authentication routes
+// Authentication routes
 app.use("/auth", authRoutes);
 
 app.use(errorHandler);
+
 export default app;

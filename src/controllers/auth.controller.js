@@ -12,26 +12,41 @@ const sendError = (next, message, statusCode, code, fieldErrors = {}) => {
 
 const register = async (req, res, next) => {
   try {
-    const { firstName, lastName, email, password, role } = req.body;
+    const { firstName, lastName, email, password, role, acceptedTerms } =
+      req.body;
 
-    //Enforce normalization even if this controller is called without validation.
+    // Normalize registration data.
     const normalizedEmail = email.trim().toLowerCase();
+    const normalizedFirstName = firstName.trim();
+    const normalizedLastName = lastName.trim();
 
-    //Reject an email that already belongs to a user.
+    // Confirm that the user accepted the terms.
+    if (acceptedTerms !== true) {
+      return sendError(
+        next,
+        "You must accept the terms and conditions.",
+        400,
+        "VALIDATION_ERROR",
+        { acceptedTerms: "You must accept the terms and conditions." },
+      );
+    }
+
+    // Check whether the email already exists.
     const existingUser = await prisma.user.findUnique({
       where: { email: normalizedEmail },
     });
 
-    if (existingUser)
+    if (existingUser) {
       return sendError(
         next,
         "Email is already registered.",
         409,
         "EMAIL_ALREADY_EXISTS",
       );
+    }
 
-    //bcrypt only processes up to 72 bytes, so check the UTF-8 byte length.
-    if (Buffer.byteLength(password, "utf8") > 72)
+    // bcrypt only processes up to 72 bytes.
+    if (Buffer.byteLength(password, "utf8") > 72) {
       return sendError(
         next,
         "Password must not exceed 72 bytes.",
@@ -39,17 +54,20 @@ const register = async (req, res, next) => {
         "VALIDATION_ERROR",
         { password: "Password must not exceed 72 bytes." },
       );
+    }
 
+    // Hash the password before saving it.
     const passwordHash = await bcrypt.hash(password, 12);
 
     const user = await prisma.user.create({
       data: {
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
+        firstName: normalizedFirstName,
+        lastName: normalizedLastName,
         email: normalizedEmail,
         passwordHash,
         role,
-        termsVersion: "V1",
+        emailVerified: false,
+        termsVersion: process.env.TERMS_VERSION || "V1",
         termsAcceptedAt: new Date(),
       },
       select: {
@@ -58,6 +76,7 @@ const register = async (req, res, next) => {
         lastName: true,
         email: true,
         role: true,
+        emailVerified: true,
         termsVersion: true,
         termsAcceptedAt: true,
         createdAt: true,
@@ -66,18 +85,20 @@ const register = async (req, res, next) => {
 
     return res.status(201).json({
       success: true,
-      message: "Registration successful.",
+      message: "Account created successfully. Please verify your email.",
       data: user,
     });
   } catch (error) {
-    //Handle a concurrent registration that wins the unique email race.
-    if (error.code === "P2002")
+    // Handle a concurrent registration with the same email.
+    if (error.code === "P2002") {
       return sendError(
         next,
         "Email is already registered.",
         409,
         "EMAIL_ALREADY_EXISTS",
       );
+    }
+
     return next(error);
   }
 };

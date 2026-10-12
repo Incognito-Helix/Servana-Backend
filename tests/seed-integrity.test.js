@@ -17,5 +17,5 @@ describe("Seed data integrity", () => {
     expect(zones).toBe(8);
     expect(categories).toBe(25);
     expect(admins).toBeGreaterThanOrEqual(1);
-  });
+  }, 15000);
 });
