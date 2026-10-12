@@ -1,8 +1,7 @@
-
 const errorHandler = (err, req, res, next) => {
   console.error(err);
 
-  const status = err.status || 500;
+  const status = err.status || err.statusCode || 500;
 
   const code =
     err.code ||
@@ -10,11 +9,12 @@ const errorHandler = (err, req, res, next) => {
 
   res.status(status).json({
     success: false,
-    code,
-    message: err.message || "Internal server error",
-    fieldErrors: err.fieldErrors || {},
+    error: {
+      code,
+      message: status >= 500 ? "Internal Server Error" : err.message,
+      fieldErrors: err.fieldErrors || {},
+    },
   });
 };
 
 export default errorHandler;
-

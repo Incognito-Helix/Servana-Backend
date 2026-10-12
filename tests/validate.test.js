@@ -35,10 +35,10 @@ describe("Validation middleware", () => {
 
     expect(response.status).toBe(400);
     expect(response.body.success).toBe(false);
-    expect(response.body.code).toBe("VALIDATION_ERROR");
-    expect(response.body.message).toBe("Validation Error");
-    expect(response.body.fieldErrors).toHaveProperty("name");
-    expect(response.body.fieldErrors).toHaveProperty("email");
+    expect(response.body.error.code).toBe("VALIDATION_ERROR");
+    expect(response.body.error.message).toBe("Validation Error");
+    expect(response.body.error.fieldErrors).toHaveProperty("name");
+    expect(response.body.error.fieldErrors).toHaveProperty("email");
   });
 
   it("allows valid input to continue", async () => {
