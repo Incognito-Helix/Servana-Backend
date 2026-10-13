@@ -10,6 +10,15 @@ import auth from "../middlewares/auth.js";
 import validate from "../middlewares/validate.js";
 import registerSchema from "../validators/auth.validator.js";
 import loginSchema from "../validators/login.validator.js";
+import {
+  forgotPassword,
+  resetPassword,
+} from "../controllers/passwordReset.controller.js";
+
+import {
+  forgotPasswordSchema,
+  resetPasswordSchema,
+} from "../validators/passwordReset.validator.js";
 
 const router = express.Router();
 
@@ -22,5 +31,9 @@ router.post("/verify-email", verifyEmail);
 router.post("/login", validate(loginSchema), login);
 router.post("/logout", auth, logout);
 router.get("/me", auth, me);
+
+//password reset
+router.post("/forgot-password", validate(forgotPasswordSchema), forgotPassword);
+router.post("/reset-password", validate(resetPasswordSchema), resetPassword);
 
 export default router;
