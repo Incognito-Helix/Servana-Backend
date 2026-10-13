@@ -12,14 +12,6 @@ import registerSchema from "../validators/auth.validator.js";
 import loginSchema from "../validators/login.validator.js";
 import googleAuth from "../controllers/google.controller.js";
 import googleSchema from "../validators/google.validator.js";
-import {
-  forgotPassword,
-  resetPassword,
-} from "../controllers/passwordReset.controller.js";
-import {
-  forgotPasswordSchema,
-  resetPasswordSchema,
-} from "../validators/passwordReset.validator.js";
 
 const router = express.Router();
 
@@ -32,6 +24,7 @@ router.post("/verify-email", verifyEmail);
 router.post("/login", validate(loginSchema), login);
 router.post("/logout", auth, logout);
 router.get("/me", auth, me);
+router.post("/google", validate(googleSchema), googleAuth);
 
 // Google authentication
 router.post("/google", validate(googleSchema), googleAuth);
