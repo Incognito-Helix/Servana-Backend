@@ -10,11 +10,12 @@ import auth from "../middlewares/auth.js";
 import validate from "../middlewares/validate.js";
 import registerSchema from "../validators/auth.validator.js";
 import loginSchema from "../validators/login.validator.js";
+import googleAuth from "../controllers/google.controller.js";
+import googleSchema from "../validators/google.validator.js";
 import {
   forgotPassword,
   resetPassword,
 } from "../controllers/passwordReset.controller.js";
-
 import {
   forgotPasswordSchema,
   resetPasswordSchema,
@@ -32,7 +33,10 @@ router.post("/login", validate(loginSchema), login);
 router.post("/logout", auth, logout);
 router.get("/me", auth, me);
 
-//password reset
+// Google authentication
+router.post("/google", validate(googleSchema), googleAuth);
+
+// Password reset
 router.post("/forgot-password", validate(forgotPasswordSchema), forgotPassword);
 router.post("/reset-password", validate(resetPasswordSchema), resetPassword);
 
