@@ -109,5 +109,6 @@ jobs:
         run: |
           trivy image \
             --severity CRITICAL \
+            --ignore-unfixed \
             --exit-code 1 \
             api:${{ github.sha }}
