@@ -86,9 +86,7 @@ jobs:
 
       - name: Install Trivy
         run: |
-          V=0.58.0
-          curl -sSfL "https://github.com/aquasecurity/trivy/releases/download/v${V}/trivy_${V}_Linux-64bit.tar.gz" | tar -xz trivy
-          sudo mv trivy /usr/local/bin/
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh -s -- -b /usr/local/bin
 
       - name: Generate Trivy report
         run: |
