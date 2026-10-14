@@ -119,3 +119,11 @@ export const createVendorProfileSchema = Joi.object({
 }).options(options);
 
 export const updateVendorProfileSchema = Joi.object(fields).options(options);
+
+export const submitVendorProfileSchema = Joi.object({
+  onboardingStep: Joi.number().valid(6).required().messages({
+    "any.required": "Complete all onboarding steps before submitting.",
+    "number.base": "Onboarding step must be a number.",
+    "any.only": "Complete all onboarding steps before submitting.",
+  }),
+}).options(options);
