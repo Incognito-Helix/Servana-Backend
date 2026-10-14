@@ -1,0 +1,22 @@
+title = "Project gitleaks config"
+
+[extend]
+useDefault = true # keep all built-in secret rules
+
+[allowlist]
+description = "Documented false positives (see docs/security-allowlist.md)"
+
+# Add entries ONLY after confirming a finding is not a real secret.
+# Every entry must be documented in docs/security-allowlist.md.
+
+# paths = [
+#   '''docs/examples/.*''',
+# ]
+
+# regexes = [
+#   '''EXAMPLE_FAKE_KEY_[A-Z0-9]+''',
+# ]
+
+# commits = [
+#   "abc123def456...",
+# ]
