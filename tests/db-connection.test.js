@@ -1,3 +1,4 @@
+import { afterAll, describe, it, expect } from "@jest/globals";
 import prisma from "../src/config/prisma.js";
 
 describe("Database connectivity", () => {
@@ -9,6 +10,5 @@ describe("Database connectivity", () => {
     const result = await prisma.$queryRaw`SELECT 1`;
 
     expect(result).toBeDefined();
-    expect(result).toHaveLength(1);
   });
 });

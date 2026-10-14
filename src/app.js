@@ -6,7 +6,14 @@ import vendorRoutes from "./routes/vendor.routes.js";
 
 const app = express();
 
-app.use(cors());
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-CSRF-Token"],
+  }),
+);
+
 app.use(express.json());
 
 app.get("/health", (req, res) => {
