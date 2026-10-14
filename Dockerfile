@@ -1,5 +1,5 @@
 # ---- Build stage ----
-FROM node:24-slim AS build
+FROM node:25-slim AS build
 WORKDIR /app
 RUN apt-get update -y && apt-get install -y --no-install-recommends openssl \
     && rm -rf /var/lib/apt/lists/*
@@ -11,7 +11,7 @@ COPY . .
 RUN npm prune --omit=dev
 
 # ---- Runtime stage ----
-FROM node:24-slim AS runtime
+FROM node:25-slim AS runtime
 ENV NODE_ENV=production \
     PORT=8080
 WORKDIR /app
