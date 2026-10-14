@@ -15,7 +15,7 @@ FROM node:24-slim AS runtime
 ENV NODE_ENV=production \
     PORT=8080
 WORKDIR /app
-RUN apt-get update -y && apt-get install -y --no-install-recommends openssl \
+RUN apt-get update -y && apt-get install -y --no-install-recommends openssl perl-base \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=build --chown=node:node /app ./
 USER node
