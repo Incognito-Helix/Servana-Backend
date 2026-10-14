@@ -32,5 +32,5 @@ jobs:
         run: npm run format:check
 
       - name: Security audit
-        run: npm audit --omit=dev --audit-level=high 
+        run: npm audit --omit=dev --audit-level=high
         continue-on-error: true
