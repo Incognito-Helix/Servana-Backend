@@ -31,6 +31,85 @@ jobs:
       - name: Prettier check
         run: npm run format:check
 
-      - name: Security audit
-        run: npm audit --omit=dev --audit-level=high 
-        continue-on-error: true
+  gitleaks:
+    name: gitleaks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install gitleaks
+        run: |
+          V=8.18.4
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${V}/gitleaks_${V}_linux_x64.tar.gz" | tar -xz gitleaks
+          sudo mv gitleaks /usr/local/bin/
+
+      - name: Scan PR commits for secrets
+        run: |
+          gitleaks detect --source . --config .gitleaks.toml \
+            --log-opts="origin/${{ github.base_ref }}..HEAD" \
+            --redact --verbose --exit-code 1
+
+  npm-audit:
+    name: npm-audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Audit dependencies (fail on critical)
+        run: npm audit --omit=dev --audit-level=critical
+
+  trivy-scan:
+    name: trivy-scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build API image
+        run: docker build -t api:${{ github.sha }} .
+
+      - name: Install Trivy
+        run: |
+          V=0.58.0
+          curl -sSfL "https://github.com/aquasecurity/trivy/releases/download/v${V}/trivy_${V}_Linux-64bit.tar.gz" | tar -xz trivy
+          sudo mv trivy /usr/local/bin/
+
+      - name: Generate Trivy report
+        run: |
+          trivy image \
+            --severity HIGH,CRITICAL \
+            --format table \
+            --output trivy-report.txt \
+            --exit-code 0 \
+            api:${{ github.sha }}
+
+      - name: Upload Trivy report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-report
+          path: trivy-report.txt
+          retention-days: 30
+
+      - name: Fail on critical findings
+        run: |
+          trivy image \
+            --severity CRITICAL \
+            --exit-code 1 \
+            api:${{ github.sha }}
