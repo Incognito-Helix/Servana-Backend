@@ -41,6 +41,7 @@ describe("Vendor onboarding persistence", () => {
     expect(profile.status).toBe("draft");
     expect(mockPrisma.vendorProfile.findUnique).toHaveBeenCalledWith({
       where: { userId: "user-1" },
+      include: { socialLinks: true },
     });
   });
 
@@ -149,6 +150,7 @@ it("transitions a completed draft profile to pending review", async () => {
       status: "pending",
       rejectionReason: null,
     },
+    include: { socialLinks: true },
   });
 });
 
