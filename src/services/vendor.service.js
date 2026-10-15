@@ -301,3 +301,35 @@ export const getProfileOwnerId = async (profileId) => {
 
   return profile ? profile.userId : null;
 };
+
+export const submitProfileForReview = async (userId) => {
+  const existing = await prisma.vendorProfile.findUnique({
+    where: { userId },
+  });
+
+  if (!existing) throw notFound();
+
+  if (existing.status !== "draft" && existing.status !== "rejected") {
+    throw httpError(
+      409,
+      "INVALID_PROFILE_STATUS",
+      "Only draft or rejected profiles can be submitted for review.",
+    );
+  }
+
+  if (existing.onboardingStep < 6) {
+    throw validationError({
+      onboardingStep: "Complete all onboarding steps before submitting.",
+    });
+  }
+
+  const profile = await prisma.vendorProfile.update({
+    where: { id: existing.id },
+    data: {
+      status: "pending",
+      rejectionReason: null,
+    },
+  });
+
+  return toOwner(profile);
+};
