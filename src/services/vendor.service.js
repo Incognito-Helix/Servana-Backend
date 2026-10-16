@@ -56,6 +56,10 @@ const toPublic = (profile) => ({
   avgRating: Number(profile.avgRating),
   reviewCount: profile.reviewCount,
   createdAt: profile.createdAt,
+  socialLinks: (profile.socialLinks ?? []).map(({ platform, url }) => ({
+    platform,
+    url,
+  })),
 });
 
 // What the vendor sees on their own profile.
@@ -213,6 +217,12 @@ export const createProfile = async (userId, input) => {
 
   const data = await buildChanges(input);
 
+  if (input.socialLinks?.length) {
+    data.socialLinks = {
+      create: input.socialLinks,
+    };
+  }
+
   for (let attempt = 0; attempt < 3; attempt += 1) {
     try {
       const profile = await prisma.vendorProfile.create({
@@ -221,6 +231,7 @@ export const createProfile = async (userId, input) => {
           userId,
           slug: await uniqueSlug(data.businessName),
         },
+        include: { socialLinks: true },
       });
 
       return toOwner(profile);
@@ -247,8 +258,10 @@ export const createProfile = async (userId, input) => {
 };
 
 export const getOwnProfile = async (userId) => {
-  const profile = await prisma.vendorProfile.findUnique({ where: { userId } });
-
+  const profile = await prisma.vendorProfile.findUnique({
+    where: { userId },
+    include: { socialLinks: true },
+  });
   if (!profile) throw notFound();
 
   return toOwner(profile);
@@ -259,6 +272,7 @@ export const getOwnProfile = async (userId) => {
 export const getProfile = async (profileId, viewerId = null) => {
   const profile = await prisma.vendorProfile.findUnique({
     where: { id: profileId },
+    include: { socialLinks: true },
   });
 
   if (!profile) throw notFound();
@@ -278,6 +292,13 @@ export const updateProfile = async (profileId, input) => {
   if (!existing) throw notFound();
 
   const data = await buildChanges(input, existing);
+
+  if (input.socialLinks !== undefined) {
+    data.socialLinks = {
+      deleteMany: {},
+      create: input.socialLinks,
+    };
+  }
 
   try {
     const profile = await prisma.vendorProfile.update({
@@ -300,4 +321,37 @@ export const getProfileOwnerId = async (profileId) => {
   });
 
   return profile ? profile.userId : null;
+};
+
+export const submitProfileForReview = async (userId) => {
+  const existing = await prisma.vendorProfile.findUnique({
+    where: { userId },
+  });
+
+  if (!existing) throw notFound();
+
+  if (existing.status !== "draft" && existing.status !== "rejected") {
+    throw httpError(
+      409,
+      "INVALID_PROFILE_STATUS",
+      "Only draft or rejected profiles can be submitted for review.",
+    );
+  }
+
+  if (existing.onboardingStep < 6) {
+    throw validationError({
+      onboardingStep: "Complete all onboarding steps before submitting.",
+    });
+  }
+
+  const profile = await prisma.vendorProfile.update({
+    where: { id: existing.id },
+    data: {
+      status: "pending",
+      rejectionReason: null,
+    },
+    include: { socialLinks: true },
+  });
+
+  return toOwner(profile);
 };

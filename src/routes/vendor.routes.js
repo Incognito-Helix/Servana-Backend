@@ -7,12 +7,14 @@ import validate from "../middlewares/validate.js";
 import {
   createVendorProfileSchema,
   updateVendorProfileSchema,
+  submitVendorProfileSchema,
 } from "../validators/vendor.validator.js";
 import {
   createVendorProfile,
   getMyVendorProfile,
   getVendorProfile,
   updateVendorProfile,
+  submitVendorProfile,
 } from "../controllers/vendor.controller.js";
 import { getProfileOwnerId } from "../services/vendor.service.js";
 
@@ -38,4 +40,11 @@ router.patch(
   updateVendorProfile,
 );
 
+router.post(
+  "/profile/submit",
+  auth,
+  requireRole("vendor"),
+  validate(submitVendorProfileSchema),
+  submitVendorProfile,
+);
 export default router;

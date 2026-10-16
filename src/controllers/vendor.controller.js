@@ -3,6 +3,7 @@ import {
   getOwnProfile,
   getProfile,
   updateProfile,
+  submitProfileForReview,
 } from "../services/vendor.service.js";
 
 export const createVendorProfile = async (req, res, next) => {
@@ -47,6 +48,20 @@ export const updateVendorProfile = async (req, res, next) => {
     return res.status(200).json({
       success: true,
       message: "Vendor profile updated.",
+      data: { profile },
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const submitVendorProfile = async (req, res, next) => {
+  try {
+    const profile = await submitProfileForReview(req.user.id);
+
+    return res.status(200).json({
+      success: true,
+      message: "Vendor profile submitted for review.",
       data: { profile },
     });
   } catch (error) {
