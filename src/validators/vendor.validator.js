@@ -155,3 +155,130 @@ export const submitVendorProfileSchema = Joi.object({
     "any.only": "Complete all onboarding steps before submitting.",
   }),
 }).options(options);
+
+const serviceFields = {
+  name: Joi.string()
+   .trim().min(2).max(100).required().messages({
+    "string.empty": "Service name is required.",
+    "string.min": "Service name must be at least 2 characters long.",
+    "string.max": "Service name must not exceed 100 characters.",
+    "any.required": "Service name is required.",
+   }),
+
+   priceMin: Joi.number().integer().min(0).required().messages({
+    "number.base": "Minimum price must be a number.",
+    "number.integer": "Minimum price must be a whole number.",
+    "number.min": "Minimum price cannot be negative.",
+    "any.required": "Service name is required.",
+   }),
+
+   priceMax: Joi.number().integer().min(0).allow(null).messages({
+    "number.base": "Maximum price must be a number.",
+    "number.integer": "Maximum price must be a whole number.",
+    "number.min": "Maximum price cannot be negative.",
+   }),
+
+   description: Joi.string().trim().max(500).allow("", null).messages({
+    "string.max": "Service description must not exceed 500 characters.",
+   }),
+};
+
+export const createServiceSchema = Joi.object(serviceFields)
+   .fork(["priceMax"], (schema) => schema.optional())
+   .custom((value, helpers) => {
+    if (
+      value.priceMax != null &&
+      value.priceMax < value.priceMin
+    ) {
+      return helpers.error("service.priceRange");
+    }
+      return value;
+  })
+   .messages({
+    "Service.priceRange":
+      "Maximum price must be greater than or equal to minimum price.",
+   })
+   .options(options);
+
+
+export const updateServiceSchema = Joi.object(serviceFields)
+  .fork(["name", "priceMin"], (schema) => schema.optional())
+  .min(1)
+  .custom((value, helpers) => {
+    if (
+      value.priceMin !== undefined &&
+      value.priceMax != null &&
+      value.priceMax < value.priceMin
+    ) {
+      return helpers.error("service.priceRange");
+    }
+
+    return value;
+  })
+  .messages({
+    "service.priceRange":
+      "Maximum price must be greater than or equal to minimum price.",
+  })
+  .options(options);
+
+  const workingHoursFields = {
+  dayOfWeek: Joi.number().integer().min(0).max(6).required().messages({
+    "number.base": "Day of week must be a number.",
+    "number.integer": "Day of week must be a whole number.",
+    "number.min": "Day of week must be between 0 and 6.",
+    "number.max": "Day of week must be between 0 and 6.",
+    "any.required": "Day of week is required.",
+  }),
+
+  openTime: Joi.string()
+    .pattern(/^([01]\d|2[0-3]):[0-5]\d$/)
+    .allow(null)
+    .messages({
+      "string.pattern.base": "Opening time must use HH:mm format.",
+    }),
+
+  closeTime: Joi.string()
+    .pattern(/^([01]\d|2[0-3]):[0-5]\d$/)
+    .allow(null)
+    .messages({
+      "string.pattern.base": "Closing time must use HH:mm format.",
+    }),
+
+  isClosed: Joi.boolean().default(false),
+};
+
+export const workingHoursSchema = Joi.object(workingHoursFields)
+  .custom((value, helpers) => {
+    if (value.isClosed) {
+      return value;
+    }
+
+    if (!value.openTime || !value.closeTime) {
+      return helpers.error("workingHours.timeRequired");
+    }
+
+    if (value.openTime >= value.closeTime) {
+      return helpers.error("workingHours.invalidRange");
+    }
+
+    return value;
+  })
+  .messages({
+    "workingHours.timeRequired":
+      "Opening and closing times are required when the vendor is open.",
+    "workingHours.invalidRange":
+      "Closing time must be later than opening time.",
+  })
+  .options(options);
+
+
+export const workingHoursListSchema = Joi.array()
+  .items(workingHoursSchema)
+  .min(1)
+  .max(7)
+  .unique("dayOfWeek")
+  .messages({
+    "array.min": "At least one working-hours entry is required.",
+    "array.max": "Working hours cannot contain more than seven entries.",
+    "array.unique": "Each day of the week can only appear once.",
+  });

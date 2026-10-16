@@ -355,3 +355,203 @@ export const submitProfileForReview = async (userId) => {
 
   return toOwner(profile);
 };
+
+export const createService = async (profileId, input) => {
+  const profile = await prisma.vendorProfile.findUnique({
+    where: { id: profileId },
+    select: { id: true },
+  });
+
+  if (!profile) throw notFound();
+
+  if(
+    input.priceMax != null &&
+    input.priceMax < input.priceMin
+  ) {
+    throw validationError({
+      priceMax: "Maximum price must be greater than or equal to minimum price.",
+    });
+  }
+
+  return prisma.service.create({
+    data: {
+      profileId,
+      name: input.name,
+      priceMin: input.priceMin,
+      priceMax: input.priceMax ?? null,
+    },
+  });
+};
+
+export const getServices = async (profileId) => {
+  const profile = await prisma.vendorProfile.findUnique({
+    where: { id: profileId },
+    select: { id: true },
+  });
+
+  if (!profile) throw notFound();
+
+  return prisma.service.findMany({
+    where: { profileId },
+    orderBy: { name: "asc"},
+  });
+};
+
+export const updateService = async (profileId, serviceId, input) => {
+  const service = await prisma.service.findFirst({
+    where: { id: serviceId, profileId}
+  })
+
+  if (!service) {
+    throw httpError(404, "SERVICE_NOT_FOUND", "Service is not found.");
+  }
+
+  const priceMin = input.priceMin ?? service.priceMin;
+  const priceMax =
+    input.priceMax !== undefined ? input.priceMax : service.priceMax;
+
+  if (priceMax != null && priceMax < priceMin) {
+    throw validationError({
+      priceMax:
+      "Maximum price must be greater than or equal to minimum price.",
+    });
+  }
+  return prisma.service.update({
+    where: { id: serviceId },
+    data: input,
+  });
+};
+
+export const deleteService = async (profileId, serviceId) => {
+  const service = await prisma.service.findFirst({
+    where: { id: serviceId, profileId },
+    select: { id: true },
+  });
+
+  if(!service) {
+    throw httpError(404, "SERVICE_NOT_FOUND", "service not found.");
+  }
+
+  await prisma.service.delete({
+    where: { id: serviceId },
+  });
+
+  return { message: "Service deleted successfully."}
+};
+
+const validateWorkingHours = (hours) => {
+  if (hours.isClosed) {
+    return;
+  }
+
+  if (!hours.openTime || !hours.closeTime) {
+    throw validationError({
+      openTime:
+        "Opening and closing times are required when the vendor is open.",
+    });
+  }
+
+  if (hours.openTime >= hours.closeTime) {
+    throw validationError({
+      closeTime: "Closing time must be later than opening time.",
+    });
+  }
+};
+
+export const saveWorkingHours = async (profileId, hoursList) => {
+  const profile = await prisma.vendorProfile.findUnique({
+    where: { id: profileId },
+    select: { id: true },
+  });
+
+  if (!profile) {
+    throw notFound();
+  }
+
+  for (const hours of hoursList) {
+    validateWorkingHours(hours);
+  }
+
+  return prisma.$transaction(
+    hoursList.map((hours) =>
+      prisma.workingHours.upsert({
+        where: {
+          profileId_dayOfWeek: {
+            profileId,
+            dayOfWeek: hours.dayOfWeek,
+          },
+        },
+        create: {
+          profileId,
+          dayOfWeek: hours.dayOfWeek,
+          openTime: hours.isClosed ? null : hours.openTime,
+          closeTime: hours.isClosed ? null : hours.closeTime,
+          isClosed: hours.isClosed ?? false,
+        },
+        update: {
+          openTime: hours.isClosed ? null : hours.openTime,
+          closeTime: hours.isClosed ? null : hours.closeTime,
+          isClosed: hours.isClosed ?? false,
+        },
+      }),
+    ),
+  );
+};
+
+export const getWorkingHours = async (profileId) => {
+  const profile = await prisma.vendorProfile.findUnique({
+    where: { id: profileId },
+    select: { id: true },
+  });
+
+  if (!profile) {
+    throw notFound();
+  }
+
+  return prisma.workingHours.findMany({
+    where: { profileId },
+    orderBy: { dayOfWeek: "asc" },
+  });
+};
+
+export const isVendorOpenNow = async (profileId) => {
+  const hours = await getWorkingHours(profileId);
+
+  const now = new Date();
+
+  const lagosTime = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Africa/Lagos",
+    weekday: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(now);
+
+  const parts = Object.fromEntries(
+    lagosTime.map(({ type, value }) => [type, value]),
+  );
+
+  const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const dayOfWeek = weekdays.indexOf(parts.weekday);
+  const currentMinutes =
+    Number(parts.hour) * 60 + Number(parts.minute);
+
+  const today = hours.find((item) => item.dayOfWeek === dayOfWeek);
+
+  if (
+    !today ||
+    today.isClosed ||
+    !today.openTime ||
+    !today.closeTime
+  ) {
+    return false;
+  }
+
+  const [openHour, openMinute] = today.openTime.split(":").map(Number);
+  const [closeHour, closeMinute] = today.closeTime.split(":").map(Number);
+
+  const openMinutes = openHour * 60 + openMinute;
+  const closeMinutes = closeHour * 60 + closeMinute;
+
+  return currentMinutes >= openMinutes && currentMinutes < closeMinutes;
+};
