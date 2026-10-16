@@ -43,7 +43,7 @@ services:
       retries: 3
       start_period: 15s
   seed:
-    build: { context: ., target: build }   # target name = your stage with all deps
+    build: { context: ., target: build } # target name = your stage with all deps
     profiles: ["tools"]
     depends_on:
       postgres: { condition: service_healthy }
@@ -54,4 +54,3 @@ services:
 
 volumes:
   postgres_data:
-

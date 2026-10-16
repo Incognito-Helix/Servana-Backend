@@ -11,6 +11,8 @@ export const LAGOS_BOUNDS = {
 const EMAIL_IN_TEXT = /[^\s@]+@[^\s@]+\.[^\s@]+/;
 const PHONE_IN_TEXT = /(?:\+?\d[\s().-]?){10,}/;
 
+const SOCIAL_PLATFORMS = ["instagram", "tiktok", "x", "facebook", "other"];
+
 // Accepts 0803..., 234803... and +234803..., and always returns +234803...
 const nigerianPhone = (value, helpers) => {
   const compact = value.replace(/[\s().-]/g, "");
@@ -60,6 +62,32 @@ const fields = {
 
   phone: phoneField("Phone"),
   whatsapp: phoneField("WhatsApp"),
+  socialLinks: Joi.array()
+    .max(5)
+    .items(
+      Joi.object({
+        platform: Joi.string()
+          .valid(...SOCIAL_PLATFORMS)
+          .required()
+          .messages({
+            "any.only": "Choose a supported social platform.",
+            "any.required": "Social platform is required.",
+          }),
+        url: Joi.string()
+          .trim()
+          .uri({ scheme: ["http", "https"] })
+          .required()
+          .messages({
+            "string.uri": "Social link must be a valid HTTP or HTTPS URL.",
+            "any.required": "Social link URL is required.",
+          }),
+      }).unknown(false),
+    )
+    .unique("platform")
+    .messages({
+      "array.max": "You can add a maximum of 5 social links.",
+      "array.unique": "Each social platform can only be added once.",
+    }),
 
   state: optionalText("State", 60),
   city: optionalText("City", 60),
@@ -119,3 +147,11 @@ export const createVendorProfileSchema = Joi.object({
 }).options(options);
 
 export const updateVendorProfileSchema = Joi.object(fields).options(options);
+
+export const submitVendorProfileSchema = Joi.object({
+  onboardingStep: Joi.number().valid(6).required().messages({
+    "any.required": "Complete all onboarding steps before submitting.",
+    "number.base": "Onboarding step must be a number.",
+    "any.only": "Complete all onboarding steps before submitting.",
+  }),
+}).options(options);
