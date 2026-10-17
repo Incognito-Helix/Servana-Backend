@@ -1,25 +1,28 @@
 import crypto from "node:crypto";
-import nodemailer from "nodemailer";
+import { sendEmail } from "../services/email.service.js";
 import prisma from "../config/prisma.js";
 
 const OTP_EXPIRY_MINUTES = 10;
+
+const sendMessage = (status, code, message, fieldErrors) => {
+  const error = new Error(message);
+  error.status = status;
+  error.code = code;
+  error.fieldErrors = fieldErrors;
+  return error;
+};
 
 const sendEmailOtp = async (req, res, next) => {
   try {
     const email = req.body.email?.trim().toLowerCase();
 
-    if (!email) {
-      return res.status(400).json({
-        success: false,
-        message: "Email is required.",
-      });
-    }
+    if (!email)
+      return next(sendMessage(400, "VALIDATION_ERROR", "Email is required."));
 
     const user = await prisma.user.findUnique({
       where: { email },
     });
 
-    // Avoid revealing whether an email address has an account.
     if (!user) {
       return res.status(200).json({
         success: true,
@@ -27,36 +30,18 @@ const sendEmailOtp = async (req, res, next) => {
       });
     }
 
-    if (user.emailVerified) {
-      return res.status(409).json({
-        success: false,
-        message: "Email is already verified.",
-      });
-    }
-
-    if (
-      !process.env.SMTP_HOST ||
-      !process.env.SMTP_USER ||
-      !process.env.SMTP_PASS ||
-      !process.env.SMTP_FROM
-    ) {
-      throw new Error("Email service is not configured.");
-    }
+    if (user.emailVerified)
+      return next(
+        sendMessage(
+          409,
+          "EMAIL_ALREADY_VERIFIED",
+          "Email is already verified.",
+        ),
+      );
 
     const otp = crypto.randomInt(100000, 1000000).toString();
     const otpHash = crypto.createHash("sha256").update(otp).digest("hex");
-
     const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
-
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT || 587),
-      secure: process.env.SMTP_SECURE === "true",
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
 
     await prisma.$transaction(async (tx) => {
       // Invalidate previous unused email OTPs for this user.
@@ -79,28 +64,12 @@ const sendEmailOtp = async (req, res, next) => {
       });
     });
 
-    try {
-      await transporter.sendMail({
-        from: process.env.SMTP_FROM,
-        to: user.email,
-        subject: "Verify your Servana email",
-        text: `Your Servana verification code is ${otp}. It expires in 10 minutes.`,
-        html: `<p>Your Servana verification code is:</p><h2>${otp}</h2><p>This code expires in 10 minutes. Do not share it with anyone.</p>`,
-      });
-    } catch (emailError) {
-      // Invalidate the code if delivery fails.
-      await prisma.authToken.updateMany({
-        where: {
-          userId: user.id,
-          type: "email_otp",
-          tokenHash: otpHash,
-          usedAt: null,
-        },
-        data: { usedAt: new Date() },
-      });
-
-      throw emailError;
-    }
+    sendEmail({
+      to: user.email,
+      subject: "Verify your Servana email",
+      text: `Your Servana verification code is ${otp}. It expires in 10 minutes.`,
+      html: `<p>Your Servana verification code is:</p><h2>${otp}</h2><p>This code expires in 10 minutes. Do not share it with anyone.</p>`,
+    });
 
     return res.status(200).json({
       success: true,
@@ -116,23 +85,27 @@ const verifyEmail = async (req, res, next) => {
     const email = req.body.email?.trim().toLowerCase();
     const otp = req.body.otp;
 
-    if (!email || typeof otp !== "string" || !/^\d{6}$/.test(otp)) {
-      return res.status(400).json({
-        success: false,
-        message: "A valid email and six-digit OTP are required.",
-      });
-    }
+    if (!email || typeof otp !== "string" || !/^\d{6}$/.test(otp))
+      return next(
+        sendMessage(
+          400,
+          "VALIDATION_ERROR",
+          "A valid email and six-digit OTP are required.",
+        ),
+      );
 
     const user = await prisma.user.findUnique({
       where: { email },
     });
 
-    if (!user) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid or expired verification code.",
-      });
-    }
+    if (!user)
+      return next(
+        sendMessage(
+          400,
+          "INVALID_OTP",
+          "Invalid or expired verification code.",
+        ),
+      );
 
     if (user.emailVerified) {
       return res.status(200).json({
@@ -178,12 +151,14 @@ const verifyEmail = async (req, res, next) => {
       return true;
     });
 
-    if (!result) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid or expired verification code.",
-      });
-    }
+    if (!result)
+      return next(
+        sendMessage(
+          400,
+          "INVALID_OTP",
+          "Invalid or expired verification code.",
+        ),
+      );
 
     return res.status(200).json({
       success: true,

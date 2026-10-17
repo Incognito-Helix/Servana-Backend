@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import bcrypt from "bcrypt";
-import nodemailer from "nodemailer";
+import { sendEmail } from "../services/email.service.js";
 import prisma from "../config/prisma.js";
 
 const RESET_TOKEN_EXPIRY_MINUTES = 10;
@@ -11,6 +11,14 @@ const genericResponse = {
     "If an account exists for that email, password reset instructions will be sent.",
 };
 
+const sendMessage = (status, code, message, fieldErrors) => {
+  const error = new Error(message);
+  error.status = status;
+  error.code = code;
+  error.fieldErrors = fieldErrors;
+  return error;
+};
+
 const forgotPassword = async (req, res, next) => {
   try {
     const email = req.body.email.trim().toLowerCase();
@@ -19,18 +27,12 @@ const forgotPassword = async (req, res, next) => {
       where: { email },
     });
 
-    // Keep the response the same whether the account exists or not.
     if (!user || !user.passwordHash) {
       return res.status(200).json(genericResponse);
     }
 
-    if (
-      !process.env.SMTP_HOST ||
-      !process.env.SMTP_USER ||
-      !process.env.SMTP_PASS ||
-      !process.env.SMTP_FROM
-    ) {
-      throw new Error("Email service is not configured.");
+    if (!process.env.FRONTEND_URL) {
+      throw new Error("FRONTEND_URL is not configured");
     }
 
     const resetToken = crypto.randomBytes(32).toString("hex");
@@ -44,72 +46,29 @@ const forgotPassword = async (req, res, next) => {
       now.getTime() + RESET_TOKEN_EXPIRY_MINUTES * 60 * 1000,
     );
 
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT || 587),
-      secure: process.env.SMTP_SECURE === "true",
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
-
     await prisma.$transaction(async (tx) => {
-      // Invalidate older unused password reset tokens.
       await tx.authToken.updateMany({
-        where: {
-          userId: user.id,
-          type: "password_reset",
-          usedAt: null,
-        },
+        where: { userId: user.id, type: "password_reset", usedAt: null },
         data: { usedAt: now },
       });
 
       await tx.authToken.create({
-        data: {
-          userId: user.id,
-          type: "password_reset",
-          tokenHash,
-          expiresAt,
-        },
+        data: { userId: user.id, type: "password_reset", tokenHash, expiresAt },
       });
     });
 
-    try {
-      const resetUrl = process.env.PASSWORD_RESET_URL;
+    const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${encodeURIComponent(resetToken)}`;
 
-      if (!resetUrl) {
-        throw new Error("Password reset URL is not configured.");
-      }
-
-      const separator = resetUrl.includes("?") ? "&" : "?";
-      const resetLink = `${resetUrl}${separator}token=${encodeURIComponent(resetToken)}`;
-
-      await transporter.sendMail({
-        from: process.env.SMTP_FROM,
-        to: user.email,
-        subject: "Reset your Servana password",
-        text: `Use this link to reset your Servana password: ${resetLink}\n\nThis link expires in 10 minutes. If you did not request a reset, you can ignore this email.`,
-        html: `
-          <p>We received a request to reset your Servana password.</p>
-          <p><a href="${resetLink}">Reset your password</a></p>
-          <p>This link expires in 10 minutes. If you did not request a reset, you can ignore this email.</p>
-        `,
-      });
-    } catch (emailError) {
-      // Invalidate the token if email delivery fails.
-      await prisma.authToken.updateMany({
-        where: {
-          userId: user.id,
-          type: "password_reset",
-          tokenHash,
-          usedAt: null,
-        },
-        data: { usedAt: new Date() },
-      });
-
-      throw emailError;
-    }
+    sendEmail({
+      to: user.email,
+      subject: "Reset your Servana password",
+      text: `Use this link to reset your Servana password: ${resetLink}\n\nThis link expires in 10 minutes. If you did not request a reset, you can ignore this email.`,
+      html: `
+    <p>We received a request to reset your Servana password.</p>
+    <p><a href="${resetLink}">Reset your password</a></p>
+    <p>This link expires in 10 minutes. If you did not request a reset, you can ignore this email.</p>
+  `,
+    });
 
     return res.status(200).json(genericResponse);
   } catch (error) {
@@ -123,14 +82,16 @@ const resetPassword = async (req, res, next) => {
 
     // Match the byte limit enforced by bcrypt.
     if (Buffer.byteLength(password, "utf8") > 72) {
-      return res.status(400).json({
-        success: false,
-        message: "Password must not exceed 72 bytes.",
-        code: "VALIDATION_ERROR",
-        fieldErrors: {
-          password: "Password must not exceed 72 bytes.",
-        },
-      });
+      return next(
+        sendMessage(
+          400,
+          "VALIDATION_ERROR",
+          "Password must not exceed 72 bytes.",
+          {
+            password: "Password must not exceed 72 bytes.",
+          },
+        ),
+      );
     }
 
     const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
@@ -192,10 +153,13 @@ const resetPassword = async (req, res, next) => {
     );
 
     if (!result) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid or expired password reset token.",
-      });
+      return next(
+        sendMessage(
+          400,
+          "INVALID_RESET_TOKEN",
+          "Invalid or expired password reset token.",
+        ),
+      );
     }
 
     return res.status(200).json({
