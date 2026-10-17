@@ -3,12 +3,13 @@ import cors from "cors";
 import errorHandler from "./middlewares/errorHandler.js";
 import authRoutes from "./routes/auth.routes.js";
 import vendorRoutes from "./routes/vendor.routes.js";
+import "dotenv/config";
 
 const app = express();
 
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: process.env.FRONTEND_URL || "http://localhost:5173",
     methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "X-CSRF-Token"],
   }),

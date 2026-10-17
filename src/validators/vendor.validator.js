@@ -118,6 +118,9 @@ const fields = {
   offersHomeService: Joi.boolean().messages({
     "boolean.base": "Home service must be true or false.",
   }),
+  worksRemotely: Joi.boolean().messages({
+    "boolean.base": "works remotely must be true or false",
+  }),
 
   serviceRadiusKm: Joi.number().integer().min(1).max(50).messages({
     "number.base": "Travel radius must be a number.",
