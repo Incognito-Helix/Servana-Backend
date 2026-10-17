@@ -1,9 +1,10 @@
 import rateLimit from "express-rate-limit";
+import "dotenv/config"
 
 const createAuthLimiter = (limit, message) =>
   rateLimit({
     windowMs: 15 * 60 * 1000,
-    limit,
+    limit: Number(process.env.AUTH_RATE_LIMIT_MAX) || limit,
     standardHeaders: "draft-8",
     legacyHeaders: false,
     message: {
