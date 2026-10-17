@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import prisma from "../config/prisma.js";
+import { worker } from "node:cluster";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const LOCATION_COOLDOWN_DAYS = 7;
@@ -20,6 +21,7 @@ const EDITABLE_FIELDS = [
   "offersHomeService",
   "serviceRadiusKm",
   "onboardingStep",
+  "worksRemotely",
 ];
 
 const httpError = (status, code, message, fieldErrors = {}) => {
@@ -166,8 +168,24 @@ const buildChanges = async (input, existing = null) => {
 
   if (!homeService && radius != null) data.serviceRadiusKm = null;
 
-  // The step only moves forward, so editing an earlier step from the review
-  // page does not send the vendor back.
+  if (data.worksRemotely === true) {
+    const primary = existing
+      ? await prisma.vendorCategory.findFirst({
+          where: { profileId: existing.id, isPrimary: true },
+          include: { category: { include: { parent: true } } },
+        })
+      : null;
+
+    const group = primary?.category.parent ?? primary?.category;
+
+    if (group?.slug !== "tech-and-creative") {
+      throw validationError({
+        worksRemotely:
+          "working remotely is only for the tech and creative services",
+      });
+    }
+  }
+
   if (data.onboardingStep !== undefined) {
     data.onboardingStep = Math.max(
       current.onboardingStep ?? 1,
@@ -175,8 +193,6 @@ const buildChanges = async (input, existing = null) => {
     );
   }
 
-  // Base location: free while the profile is still a draft, then once every
-  // 7 days.
   const moved = ["zoneId", "latitude", "longitude"].some(
     (field) => data[field] !== undefined && data[field] !== current[field],
   );
