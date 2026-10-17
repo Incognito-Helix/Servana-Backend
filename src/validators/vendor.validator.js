@@ -279,3 +279,13 @@ export const workingHoursListSchema = Joi.array()
     "array.max": "Working hours cannot contain more than seven entries.",
     "array.unique": "Each day of the week can only appear once.",
   });
+
+export const signUploadSchema = Joi.object({
+  kind: Joi.string()
+    .valid("cover", "profile", "portfolio")
+    .required()
+    .messages({
+      "any.only": "kind must be cover, profile or portfolio",
+      "any.required": "kind is required",
+    }),
+}).optional(options);
