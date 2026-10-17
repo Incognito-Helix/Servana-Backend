@@ -344,6 +344,13 @@ export const submitProfileForReview = async (userId) => {
     });
   }
 
+  if (
+    existing.zoneId == null ||
+    existing.latitude == null ||
+    existing.longitude == null
+  ) {
+    throw validationError({ zoneId: "choose your location before submitting" });
+  }
   const profile = await prisma.vendorProfile.update({
     where: { id: existing.id },
     data: {
