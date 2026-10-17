@@ -64,7 +64,6 @@ router.post(
   submitVendorProfile,
 );
 
-
 router.post(
   "/:id/services",
   auth,

@@ -157,49 +157,44 @@ export const submitVendorProfileSchema = Joi.object({
 }).options(options);
 
 const serviceFields = {
-  name: Joi.string()
-   .trim().min(2).max(100).required().messages({
+  name: Joi.string().trim().min(2).max(100).required().messages({
     "string.empty": "Service name is required.",
     "string.min": "Service name must be at least 2 characters long.",
     "string.max": "Service name must not exceed 100 characters.",
     "any.required": "Service name is required.",
-   }),
+  }),
 
-   priceMin: Joi.number().integer().min(0).required().messages({
+  priceMin: Joi.number().integer().min(0).required().messages({
     "number.base": "Minimum price must be a number.",
     "number.integer": "Minimum price must be a whole number.",
     "number.min": "Minimum price cannot be negative.",
     "any.required": "Service name is required.",
-   }),
+  }),
 
-   priceMax: Joi.number().integer().min(0).allow(null).messages({
+  priceMax: Joi.number().integer().min(0).allow(null).messages({
     "number.base": "Maximum price must be a number.",
     "number.integer": "Maximum price must be a whole number.",
     "number.min": "Maximum price cannot be negative.",
-   }),
+  }),
 
-   description: Joi.string().trim().max(500).allow("", null).messages({
+  description: Joi.string().trim().max(500).allow("", null).messages({
     "string.max": "Service description must not exceed 500 characters.",
-   }),
+  }),
 };
 
 export const createServiceSchema = Joi.object(serviceFields)
-   .fork(["priceMax"], (schema) => schema.optional())
-   .custom((value, helpers) => {
-    if (
-      value.priceMax != null &&
-      value.priceMax < value.priceMin
-    ) {
+  .fork(["priceMax"], (schema) => schema.optional())
+  .custom((value, helpers) => {
+    if (value.priceMax != null && value.priceMax < value.priceMin) {
       return helpers.error("service.priceRange");
     }
-      return value;
+    return value;
   })
-   .messages({
+  .messages({
     "Service.priceRange":
       "Maximum price must be greater than or equal to minimum price.",
-   })
-   .options(options);
-
+  })
+  .options(options);
 
 export const updateServiceSchema = Joi.object(serviceFields)
   .fork(["name", "priceMin"], (schema) => schema.optional())
@@ -221,7 +216,7 @@ export const updateServiceSchema = Joi.object(serviceFields)
   })
   .options(options);
 
-  const workingHoursFields = {
+const workingHoursFields = {
   dayOfWeek: Joi.number().integer().min(0).max(6).required().messages({
     "number.base": "Day of week must be a number.",
     "number.integer": "Day of week must be a whole number.",
@@ -270,7 +265,6 @@ export const workingHoursSchema = Joi.object(workingHoursFields)
       "Closing time must be later than opening time.",
   })
   .options(options);
-
 
 export const workingHoursListSchema = Joi.array()
   .items(workingHoursSchema)

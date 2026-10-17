@@ -1,4 +1,3 @@
-
 import {
   createService,
   getServices,
@@ -53,10 +52,7 @@ export const updateVendorService = async (req, res, next) => {
 
 export const deleteVendorService = async (req, res, next) => {
   try {
-    const result = await deleteService(
-      req.params.id,
-      req.params.serviceId,
-    );
+    const result = await deleteService(req.params.id, req.params.serviceId);
 
     return res.status(200).json({
       success: true,

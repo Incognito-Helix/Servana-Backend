@@ -6,10 +6,7 @@ import {
 
 export const saveVendorWorkingHours = async (req, res, next) => {
   try {
-    const workingHours = await saveWorkingHours(
-      req.params.id,
-      req.body,
-    );
+    const workingHours = await saveWorkingHours(req.params.id, req.body);
 
     return res.status(200).json({
       success: true,

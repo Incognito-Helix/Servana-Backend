@@ -364,10 +364,7 @@ export const createService = async (profileId, input) => {
 
   if (!profile) throw notFound();
 
-  if(
-    input.priceMax != null &&
-    input.priceMax < input.priceMin
-  ) {
+  if (input.priceMax != null && input.priceMax < input.priceMin) {
     throw validationError({
       priceMax: "Maximum price must be greater than or equal to minimum price.",
     });
@@ -393,14 +390,14 @@ export const getServices = async (profileId) => {
 
   return prisma.service.findMany({
     where: { profileId },
-    orderBy: { name: "asc"},
+    orderBy: { name: "asc" },
   });
 };
 
 export const updateService = async (profileId, serviceId, input) => {
   const service = await prisma.service.findFirst({
-    where: { id: serviceId, profileId}
-  })
+    where: { id: serviceId, profileId },
+  });
 
   if (!service) {
     throw httpError(404, "SERVICE_NOT_FOUND", "Service is not found.");
@@ -412,8 +409,7 @@ export const updateService = async (profileId, serviceId, input) => {
 
   if (priceMax != null && priceMax < priceMin) {
     throw validationError({
-      priceMax:
-      "Maximum price must be greater than or equal to minimum price.",
+      priceMax: "Maximum price must be greater than or equal to minimum price.",
     });
   }
   return prisma.service.update({
@@ -428,7 +424,7 @@ export const deleteService = async (profileId, serviceId) => {
     select: { id: true },
   });
 
-  if(!service) {
+  if (!service) {
     throw httpError(404, "SERVICE_NOT_FOUND", "service not found.");
   }
 
@@ -436,7 +432,7 @@ export const deleteService = async (profileId, serviceId) => {
     where: { id: serviceId },
   });
 
-  return { message: "Service deleted successfully."}
+  return { message: "Service deleted successfully." };
 };
 
 const validateWorkingHours = (hours) => {
@@ -533,17 +529,11 @@ export const isVendorOpenNow = async (profileId) => {
 
   const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const dayOfWeek = weekdays.indexOf(parts.weekday);
-  const currentMinutes =
-    Number(parts.hour) * 60 + Number(parts.minute);
+  const currentMinutes = Number(parts.hour) * 60 + Number(parts.minute);
 
   const today = hours.find((item) => item.dayOfWeek === dayOfWeek);
 
-  if (
-    !today ||
-    today.isClosed ||
-    !today.openTime ||
-    !today.closeTime
-  ) {
+  if (!today || today.isClosed || !today.openTime || !today.closeTime) {
     return false;
   }
 
