@@ -1,6 +1,5 @@
 import { randomBytes } from "node:crypto";
 import prisma from "../config/prisma.js";
-import { worker } from "node:cluster";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const LOCATION_COOLDOWN_DAYS = 7;
