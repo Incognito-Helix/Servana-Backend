@@ -129,7 +129,7 @@ it("transitions a completed draft profile to pending review", async () => {
     rejectionReason: null,
     zoneId: "zone-1",
     latitude: 6.45,
-    longitude: 3.4
+    longitude: 3.4,
   });
 
   mockPrisma.vendorProfile.update.mockResolvedValue({

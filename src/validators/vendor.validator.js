@@ -280,13 +280,13 @@ export const workingHoursListSchema = Joi.array()
     "array.unique": "Each day of the week can only appear once.",
   });
 
-  export const verifyNinSchema = Joi.object({
-    nin: Joi.string()
-       .pattern(/^\d{11}$/)
-       .required()
-       .messages({
-        "string.empty": "NIN is required.",
-        "string.pattern.base": "NIN must contain exactly 11 digits.",
-        "any.required": "NIN iss required.",
-       }),
-  }).options(options)
+export const verifyNinSchema = Joi.object({
+  nin: Joi.string()
+    .pattern(/^\d{11}$/)
+    .required()
+    .messages({
+      "string.empty": "NIN is required.",
+      "string.pattern.base": "NIN must contain exactly 11 digits.",
+      "any.required": "NIN iss required.",
+    }),
+}).options(options);

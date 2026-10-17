@@ -7,15 +7,15 @@
 // The input format must be validated before calling this provider.
 
 export const verifyNinWithMock = async (nin) => {
-    if (nin.endsWith("0000")) {
-        return{
-          status: "failed",
-          failedReason: "Mock verification failed.",
-        };
-    }
-
+  if (nin.endsWith("0000")) {
     return {
-        status: "passed",
-        failedReason: null,
+      status: "failed",
+      failedReason: "Mock verification failed.",
     };
+  }
+
+  return {
+    status: "passed",
+    failedReason: null,
+  };
 };

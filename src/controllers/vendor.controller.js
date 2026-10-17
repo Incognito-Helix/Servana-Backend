@@ -80,7 +80,7 @@ export const verifyVendorNinController = async (req, res, next) => {
         verification.status === "passed"
           ? "NIN verification successful."
           : "NIN verification failed.",
-        data: { verification },
+      data: { verification },
     });
   } catch (error) {
     return next(error);

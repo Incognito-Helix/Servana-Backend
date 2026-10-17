@@ -1,4 +1,3 @@
-
 import { afterEach, describe, expect, it, jest } from "@jest/globals";
 
 const mockVerifyNinWithMock = jest.fn();
@@ -40,9 +39,7 @@ describe("Vendor NIN verification", () => {
   const nin = "12345678901";
 
   const setupTransaction = () => {
-    mockPrisma.$transaction.mockImplementation((callback) =>
-      callback(mockTx),
-    );
+    mockPrisma.$transaction.mockImplementation((callback) => callback(mockTx));
   };
 
   it("stores only the last four digits when verification passes", async () => {

@@ -80,7 +80,7 @@ router.post(
   requireRole("vendor"),
   validate(verifyNinSchema),
   verifyVendorNinController,
-)
+);
 
 router.get("/:id/services", getVendorServices);
 
