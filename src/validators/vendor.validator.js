@@ -118,7 +118,7 @@ const fields = {
   offersHomeService: Joi.boolean().messages({
     "boolean.base": "Home service must be true or false.",
   }),
-  worksRemotely: Joi.boolean().message({
+  worksRemotely: Joi.boolean().messages({
     "boolean.base": "works remotely must be true or false",
   }),
 
