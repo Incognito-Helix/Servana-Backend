@@ -4,6 +4,7 @@ import {
   getProfile,
   updateProfile,
   submitProfileForReview,
+  verifyVendorNin,
 } from "../services/vendor.service.js";
 
 export const createVendorProfile = async (req, res, next) => {
@@ -63,6 +64,23 @@ export const submitVendorProfile = async (req, res, next) => {
       success: true,
       message: "Vendor profile submitted for review.",
       data: { profile },
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const verifyVendorNinController = async (req, res, next) => {
+  try {
+    const verification = await verifyVendorNin(req.useer.id, req.body.nin);
+
+    return res.status(200).json({
+      success: true,
+      message:
+        verification.status === "passed"
+          ? "NIN verification successful."
+          : "NIN verification failed.",
+        data: { verification },
     });
   } catch (error) {
     return next(error);
