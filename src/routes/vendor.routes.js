@@ -8,6 +8,9 @@ import {
   createVendorProfileSchema,
   updateVendorProfileSchema,
   submitVendorProfileSchema,
+  createServiceSchema,
+  updateServiceSchema,
+  workingHoursListSchema,
 } from "../validators/vendor.validator.js";
 import {
   createVendorProfile,
@@ -16,7 +19,20 @@ import {
   updateVendorProfile,
   submitVendorProfile,
 } from "../controllers/vendor.controller.js";
+
+import {
+  createVendorService,
+  getVendorServices,
+  updateVendorService,
+  deleteVendorService,
+} from "../controllers/service.controller.js";
 import { getProfileOwnerId } from "../services/vendor.service.js";
+
+import {
+  saveVendorWorkingHours,
+  getVendorWorkingHours,
+  getVendorOpenNow,
+} from "../controllers/working-hours.controller.js";
 
 const router = express.Router();
 
@@ -47,4 +63,46 @@ router.post(
   validate(submitVendorProfileSchema),
   submitVendorProfile,
 );
+
+router.post(
+  "/:id/services",
+  auth,
+  requireRole("vendor"),
+  requireOwnership((req) => getProfileOwnerId(req.params.id)),
+  validate(createServiceSchema),
+  createVendorService,
+);
+
+router.get("/:id/services", getVendorServices);
+
+router.patch(
+  "/:id/services/:serviceId",
+  auth,
+  requireRole("vendor"),
+  requireOwnership((req) => getProfileOwnerId(req.params.id)),
+  validate(updateServiceSchema),
+  updateVendorService,
+);
+
+router.delete(
+  "/:id/services/:serviceId",
+  auth,
+  requireRole("vendor"),
+  requireOwnership((req) => getProfileOwnerId(req.params.id)),
+  deleteVendorService,
+);
+
+router.put(
+  "/:id/working-hours",
+  auth,
+  requireRole("vendor"),
+  requireOwnership((req) => getProfileOwnerId(req.params.id)),
+  validate(workingHoursListSchema),
+  saveVendorWorkingHours,
+);
+
+router.get("/:id/working-hours", getVendorWorkingHours);
+
+router.get("/:id/open-now", getVendorOpenNow);
+
 export default router;
