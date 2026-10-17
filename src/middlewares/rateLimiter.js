@@ -1,5 +1,5 @@
 import rateLimit from "express-rate-limit";
-import "dotenv/config"
+import "dotenv/config";
 
 const createAuthLimiter = (limit, message) =>
   rateLimit({
