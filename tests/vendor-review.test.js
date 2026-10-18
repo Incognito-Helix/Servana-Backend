@@ -1,4 +1,3 @@
-
 import { afterEach, describe, expect, it, jest } from "@jest/globals";
 
 const mockPrisma = {
@@ -13,10 +12,7 @@ jest.unstable_mockModule("../src/config/prisma.js", () => ({
   default: mockPrisma,
 }));
 
-const { getPendingVendorReviews,
-        approveVendorProfile,
-        rejectVendorProfile,
- } =
+const { getPendingVendorReviews, approveVendorProfile, rejectVendorProfile } =
   await import("../src/services/vendor.service.js");
 
 describe("Vendor review queue", () => {
@@ -133,9 +129,7 @@ describe("Vendor profile approval and rejection", () => {
       status: "approved",
     });
 
-    await expect(
-      approveVendorProfile("profile-1"),
-    ).rejects.toMatchObject({
+    await expect(approveVendorProfile("profile-1")).rejects.toMatchObject({
       status: 409,
       code: "INVALID_PROFILE_STATUS",
     });
@@ -144,12 +138,12 @@ describe("Vendor profile approval and rejection", () => {
   });
 
   it("rejects an empty rejection reason", async () => {
-    await expect(
-      rejectVendorProfile("profile-1", "   "),
-    ).rejects.toMatchObject({
-      status: 400,
-      code: "VALIDATION_ERROR",
-    });
+    await expect(rejectVendorProfile("profile-1", "   ")).rejects.toMatchObject(
+      {
+        status: 400,
+        code: "VALIDATION_ERROR",
+      },
+    );
 
     expect(mockPrisma.vendorProfile.update).not.toHaveBeenCalled();
   });
@@ -157,12 +151,12 @@ describe("Vendor profile approval and rejection", () => {
   it("returns not found when approving a missing profile", async () => {
     mockPrisma.vendorProfile.findUnique.mockResolvedValue(null);
 
-    await expect(
-      approveVendorProfile("missing-profile"),
-    ).rejects.toMatchObject({
-      status: 404,
-      code: "PROFILE_NOT_FOUND",
-    });
+    await expect(approveVendorProfile("missing-profile")).rejects.toMatchObject(
+      {
+        status: 404,
+        code: "PROFILE_NOT_FOUND",
+      },
+    );
 
     expect(mockPrisma.vendorProfile.update).not.toHaveBeenCalled();
   });

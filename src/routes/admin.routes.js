@@ -1,10 +1,11 @@
 import express from "express";
 import auth from "../middlewares/auth.js";
 import requireRole from "../middlewares/role.js";
-import { getPendingVendorReviewsController,
-         approveVendorProfileController,
-         rejectVendorProfileController,
-      } from "../controllers/admin.controller.js";
+import {
+  getPendingVendorReviewsController,
+  approveVendorProfileController,
+  rejectVendorProfileController,
+} from "../controllers/admin.controller.js";
 
 const router = express.Router();
 

@@ -2,7 +2,6 @@ import { randomBytes } from "node:crypto";
 import prisma from "../config/prisma.js";
 import { verifyNinWithMock } from "./verification/ninVerification.mock.js";
 
-
 const DAY_MS = 24 * 60 * 60 * 1000;
 const LOCATION_COOLDOWN_DAYS = 7;
 
@@ -417,10 +416,10 @@ export const getPendingVendorReviews = async () => {
       categories: {
         include: {
           category: {
-           select:{
-            id: true,
-            name: true,
-           },
+            select: {
+              id: true,
+              name: true,
+            },
           },
         },
       },
@@ -473,7 +472,7 @@ export const approveVendorProfile = async (profileId) => {
   return toOwner(profile);
 };
 
-export const rejectVendorProfile =async (profileId, reason) => {
+export const rejectVendorProfile = async (profileId, reason) => {
   if (typeof reason !== "string" || !reason.trim()) {
     throw validationError({
       reason: "A rejection reasin is required.",

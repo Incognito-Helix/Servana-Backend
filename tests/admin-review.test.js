@@ -1,8 +1,6 @@
-
 import express from "express";
 import request from "supertest";
 import { afterEach, describe, expect, it, jest } from "@jest/globals";
-
 
 const mockGetPendingVendorReviews = jest.fn();
 const mockApproveVendorProfile = jest.fn();

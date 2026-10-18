@@ -1,8 +1,8 @@
-
-import { getPendingVendorReviews,
-         approveVendorProfile,
-         rejectVendorProfile,
- } from "../services/vendor.service.js";
+import {
+  getPendingVendorReviews,
+  approveVendorProfile,
+  rejectVendorProfile,
+} from "../services/vendor.service.js";
 
 export const getPendingVendorReviewsController = async (req, res, next) => {
   try {
@@ -26,27 +26,24 @@ export const approveVendorProfileController = async (req, res, next) => {
       message: "Vendor profile approved successfully.",
       data: { profile },
     });
-
   } catch (error) {
     return next(error);
   }
 };
 
 export const rejectVendorProfileController = async (req, res, next) => {
-  try{
+  try {
     const profile = await rejectVendorProfile(
       req.params.profileId,
       req.body.reason,
     );
-
 
     return res.status(200).json({
       success: true,
       message: "Vendor profile rejected successfully.",
       data: { profile },
     });
-
-  }catch(error) {
+  } catch (error) {
     return next(error);
   }
-}
+};
