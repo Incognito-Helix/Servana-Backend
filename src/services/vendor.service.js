@@ -370,7 +370,7 @@ export const submitProfileForReview = async (userId) => {
   }
   if (!existing.isVerified)
     throw validationError({ nin: "verify your NIN before submitting" });
-  
+
   const profile = await prisma.vendorProfile.update({
     where: { id: existing.id },
     data: {

@@ -126,6 +126,4 @@ router.post(
   signUpload,
 );
 
-
-
 export default router;
