@@ -12,6 +12,7 @@ import {
   updateServiceSchema,
   workingHoursListSchema,
   verifyNinSchema,
+  signUploadSchema,
 } from "../validators/vendor.validator.js";
 import {
   createVendorProfile,
@@ -35,6 +36,8 @@ import {
   getVendorWorkingHours,
   getVendorOpenNow,
 } from "../controllers/working-hours.controller.js";
+
+import { signUpload } from "../controllers/upload.controller.js";
 
 const router = express.Router();
 
@@ -113,5 +116,14 @@ router.put(
 router.get("/:id/working-hours", getVendorWorkingHours);
 
 router.get("/:id/open-now", getVendorOpenNow);
+
+router.post(
+  "/:id/uploads/sign",
+  auth,
+  requireRole("vendor"),
+  requireOwnership((req) => getProfileOwnerId(req.params.id)),
+  validate(signUploadSchema),
+  signUpload,
+);
 
 export default router;
