@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import prisma from "../config/prisma.js";
+import { verifyNinWithMock } from "./verification/ninVerification.mock.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const LOCATION_COOLDOWN_DAYS = 7;
@@ -566,4 +567,45 @@ export const isVendorOpenNow = async (profileId) => {
   const closeMinutes = closeHour * 60 + closeMinute;
 
   return currentMinutes >= openMinutes && currentMinutes < closeMinutes;
+};
+
+export const verifyVendorNin = async (userId, nin) => {
+  const profile = await prisma.vendorProfile.findUnique({
+    where: { userId },
+    select: { id: true },
+  });
+
+  if (!profile) {
+    throw notFound();
+  }
+
+  const result = await verifyNinWithMock(nin);
+  const ninLast4 = nin.slice(-4);
+
+  return prisma.$transaction(async (tx) => {
+    const verification = await tx.verification.create({
+      data: {
+        profileId: profile.id,
+        ninLast4,
+        status: result.status,
+        failedReason: result.failedReason,
+      },
+      select: {
+        id: true,
+        ninLast4: true,
+        status: true,
+        failedReason: true,
+        checkedAt: true,
+      },
+    });
+
+    await tx.vendorProfile.update({
+      where: { id: profile.id },
+      data: {
+        isVerified: result.status === "passed",
+      },
+    });
+
+    return verification;
+  });
 };

@@ -11,6 +11,7 @@ import {
   createServiceSchema,
   updateServiceSchema,
   workingHoursListSchema,
+  verifyNinSchema,
   signUploadSchema,
 } from "../validators/vendor.validator.js";
 import {
@@ -19,6 +20,7 @@ import {
   getVendorProfile,
   updateVendorProfile,
   submitVendorProfile,
+  verifyVendorNinController,
 } from "../controllers/vendor.controller.js";
 
 import {
@@ -74,6 +76,13 @@ router.post(
   requireOwnership((req) => getProfileOwnerId(req.params.id)),
   validate(createServiceSchema),
   createVendorService,
+);
+router.post(
+  "/profile/verify-nin",
+  auth,
+  requireRole("vendor"),
+  validate(verifyNinSchema),
+  verifyVendorNinController,
 );
 
 router.get("/:id/services", getVendorServices);
