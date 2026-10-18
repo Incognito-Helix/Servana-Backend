@@ -3,6 +3,7 @@ import cors from "cors";
 import errorHandler from "./middlewares/errorHandler.js";
 import authRoutes from "./routes/auth.routes.js";
 import vendorRoutes from "./routes/vendor.routes.js";
+import verificationRoutes from "./routes/verification.routes.js";
 import "dotenv/config";
 import adminRoutes from "./routes/admin.routes.js";
 
@@ -28,6 +29,7 @@ app.get("/health", (req, res) => {
 app.use("/auth", authRoutes);
 
 app.use("/vendors", vendorRoutes);
+app.use("/verifications", verificationRoutes);
 
 app.use("/admin", adminRoutes);
 

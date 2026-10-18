@@ -72,7 +72,7 @@ export const submitVendorProfile = async (req, res, next) => {
 
 export const verifyVendorNinController = async (req, res, next) => {
   try {
-    const verification = await verifyVendorNin(req.useer.id, req.body.nin);
+    const verification = await verifyVendorNin(req.user.id, req.body.nin);
 
     return res.status(200).json({
       success: true,
