@@ -3,6 +3,7 @@ import cors from "cors";
 import errorHandler from "./middlewares/errorHandler.js";
 import authRoutes from "./routes/auth.routes.js";
 import vendorRoutes from "./routes/vendor.routes.js";
+import verificationRoutes from "./routes/verification.routes.js";
 import "dotenv/config";
 
 const app = express();
@@ -27,6 +28,7 @@ app.get("/health", (req, res) => {
 app.use("/auth", authRoutes);
 
 app.use("/vendors", vendorRoutes);
+app.use("/verifications", verificationRoutes);
 
 app.use(errorHandler);
 

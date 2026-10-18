@@ -4,6 +4,7 @@ import { verifyNinWithMock } from "./verification/ninVerification.mock.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const LOCATION_COOLDOWN_DAYS = 7;
+const nin_max_attempts = 3;
 
 // Columns a vendor can set themselves. Everything else on the row (status,
 // slug, ratings, verification, userId) is controlled by the server.
@@ -367,6 +368,9 @@ export const submitProfileForReview = async (userId) => {
   ) {
     throw validationError({ zoneId: "choose your location before submitting" });
   }
+  if (!existing.isVerified)
+    throw validationError({ nin: "verify your NIN before submitting" });
+
   const profile = await prisma.vendorProfile.update({
     where: { id: existing.id },
     data: {
@@ -572,12 +576,33 @@ export const isVendorOpenNow = async (profileId) => {
 export const verifyVendorNin = async (userId, nin) => {
   const profile = await prisma.vendorProfile.findUnique({
     where: { userId },
-    select: { id: true },
+    select: { id: true, isVerified: true },
   });
 
   if (!profile) {
     throw notFound();
   }
+
+  if (profile.isVerified)
+    throw httpError(
+      409,
+      "NIN_ALREADY_VERIFIED",
+      "your NIN has already been verified",
+    );
+
+  const attemptsToday = await prisma.verification.count({
+    where: {
+      profileId: profile.id,
+      checkedAt: { gte: new Date(Date.now() - DAY_MS) },
+    },
+  });
+
+  if (attemptsToday >= nin_max_attempts)
+    throw httpError(
+      429,
+      "RATE_LIMIT_EXCEEDED",
+      "too many NIN attempts. please try again in 24 hours",
+    );
 
   const result = await verifyNinWithMock(nin);
   const ninLast4 = nin.slice(-4);
@@ -599,12 +624,12 @@ export const verifyVendorNin = async (userId, nin) => {
       },
     });
 
-    await tx.vendorProfile.update({
-      where: { id: profile.id },
-      data: {
-        isVerified: result.status === "passed",
-      },
-    });
+    if (result.status === "passed") {
+      await tx.vendorProfile.update({
+        where: { id: profile.id },
+        data: { isVerified: true },
+      });
+    }
 
     return verification;
   });

@@ -11,7 +11,7 @@ import {
   createServiceSchema,
   updateServiceSchema,
   workingHoursListSchema,
-  verifyNinSchema,
+  // verifyNinSchema,
   signUploadSchema,
 } from "../validators/vendor.validator.js";
 import {
@@ -20,7 +20,7 @@ import {
   getVendorProfile,
   updateVendorProfile,
   submitVendorProfile,
-  verifyVendorNinController,
+  // verifyVendorNinController,
 } from "../controllers/vendor.controller.js";
 
 import {
@@ -77,13 +77,13 @@ router.post(
   validate(createServiceSchema),
   createVendorService,
 );
-router.post(
-  "/profile/verify-nin",
-  auth,
-  requireRole("vendor"),
-  validate(verifyNinSchema),
-  verifyVendorNinController,
-);
+// router.post(
+//   "/profile/verify-nin",
+//   auth,
+//   requireRole("vendor"),
+//   validate(verifyNinSchema),
+//   verifyVendorNinController,
+// );
 
 router.get("/:id/services", getVendorServices);
 
