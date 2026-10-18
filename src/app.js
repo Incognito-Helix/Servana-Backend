@@ -5,6 +5,7 @@ import authRoutes from "./routes/auth.routes.js";
 import vendorRoutes from "./routes/vendor.routes.js";
 import verificationRoutes from "./routes/verification.routes.js";
 import "dotenv/config";
+import adminRoutes from "./routes/admin.routes.js";
 
 const app = express();
 
@@ -29,6 +30,8 @@ app.use("/auth", authRoutes);
 
 app.use("/vendors", vendorRoutes);
 app.use("/verifications", verificationRoutes);
+
+app.use("/admin", adminRoutes);
 
 app.use(errorHandler);
 

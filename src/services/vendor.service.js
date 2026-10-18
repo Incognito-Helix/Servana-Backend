@@ -383,6 +383,119 @@ export const submitProfileForReview = async (userId) => {
   return toOwner(profile);
 };
 
+export const getPendingVendorReviews = async () => {
+  return prisma.vendorProfile.findMany({
+    where: { status: "pending" },
+    orderBy: { updatedAt: "asc" },
+    select: {
+      id: true,
+      businessName: true,
+      about: true,
+      phone: true,
+      whatsapp: true,
+      state: true,
+      city: true,
+      streetAddress: true,
+      onboardingStep: true,
+      status: true,
+      rejectionReason: true,
+      createdAt: true,
+      updatedAt: true,
+      user: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+        },
+      },
+      zone: {
+        select: {
+          id: true,
+          name: true,
+          city: true,
+          state: true,
+        },
+      },
+      categories: {
+        include: {
+          category: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      },
+      socialLinks: true,
+      services: true,
+      portfolioImages: true,
+      workingHours: true,
+      verifications: {
+        select: {
+          status: true,
+          failedReason: true,
+          checkedAt: true,
+          ninLast4: true,
+        },
+        orderBy: { checkedAt: "desc" },
+      },
+    },
+  });
+};
+
+const ensurePendingProfile = async (profileId) => {
+  const profile = await prisma.vendorProfile.findUnique({
+    where: { id: profileId },
+    select: { id: true, status: true },
+  });
+
+  if (!profile) throw notFound();
+
+  if (profile.status !== "pending") {
+    throw httpError(
+      409,
+      "INVALID_PROFILE_STATUS",
+      "Only pending vendor profiles can be reviewed.",
+    );
+  }
+  return profile;
+};
+
+export const approveVendorProfile = async (profileId) => {
+  await ensurePendingProfile(profileId);
+
+  const profile = await prisma.vendorProfile.update({
+    where: { id: profileId },
+    data: {
+      status: "approved",
+      rejectionReason: null,
+    },
+    include: { socialLinks: true },
+  });
+  return toOwner(profile);
+};
+
+export const rejectVendorProfile = async (profileId, reason) => {
+  if (typeof reason !== "string" || !reason.trim()) {
+    throw validationError({
+      reason: "A rejection reasin is required.",
+    });
+  }
+
+  await ensurePendingProfile(profileId);
+
+  const profile = await prisma.vendorProfile.update({
+    where: { id: profileId },
+    data: {
+      status: "rejected",
+      rejectionReason: reason.trim(),
+    },
+    include: { socialLinks: true },
+  });
+  return toOwner(profile);
+};
+
 export const createService = async (profileId, input) => {
   const profile = await prisma.vendorProfile.findUnique({
     where: { id: profileId },
