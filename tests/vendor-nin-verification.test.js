@@ -6,6 +6,9 @@ const mockPrisma = {
   vendorProfile: {
     findUnique: jest.fn(),
   },
+  verification: {
+    count: jest.fn(),
+  },
   $transaction: jest.fn(),
 };
 

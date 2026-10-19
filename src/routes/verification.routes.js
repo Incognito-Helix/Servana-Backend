@@ -10,7 +10,9 @@ const router = express.Router();
 router.post(
   "/nin",
   auth,
-  requireRole("vendor", validate(verifyNinSchema), verifyVendorNinController),
+  requireRole("vendor"),
+  validate(verifyNinSchema),
+  verifyVendorNinController,
 );
 
 export default router;
