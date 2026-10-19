@@ -736,13 +736,10 @@ export const verifyVendorNin = async (userId, nin) => {
         checkedAt: true,
       },
     });
-
-    if (result.status === "passed") {
-      await tx.vendorProfile.update({
-        where: { id: profile.id },
-        data: { isVerified: true },
-      });
-    }
+    await tx.vendorProfile.update({
+      where: { id: profile.id },
+      data: { isVerified: result.status === "passed" },
+    });
 
     return verification;
   });
