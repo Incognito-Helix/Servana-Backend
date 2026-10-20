@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, jest } from "@jest/globals";
 
 const mockPrisma = {
   $transaction: jest.fn(),
+  $queryRaw: jest.fn(),
   vendorProfile: {
     findMany: jest.fn(),
     count: jest.fn(),
@@ -20,24 +21,15 @@ describe("Vendor search service", () => {
   });
 
   it("returns vendors with default pagination", async () => {
-    mockPrisma.$transaction.mockResolvedValue([[], 0]);
+    mockPrisma.$transaction.mockResolvedValue([[], [{ total: 0 }]]);
 
     const result = await searchVendors({
-      categoryId: undefined,
-      serviceId: undefined,
+      latitude: 6.5244,
+      longitude: 3.3792,
     });
 
-    expect(mockPrisma.vendorProfile.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        skip: 0,
-        take: 10,
-        where: expect.objectContaining({
-          status: "approved",
-          latitude: { not: null },
-          longitude: { not: null },
-        }),
-      }),
-    );
+    expect(mockPrisma.$queryRaw).toHaveBeenCalledTimes(2);
+    expect(mockPrisma.$transaction).toHaveBeenCalledTimes(1);
 
     expect(result).toEqual({
       vendors: [],
@@ -50,56 +42,63 @@ describe("Vendor search service", () => {
     });
   });
 
-  it("filters vendors by category", async () => {
-    mockPrisma.$transaction.mockResolvedValue([[], 0]);
+  it("includes the category filter in the database query", async () => {
+    mockPrisma.$transaction.mockResolvedValue([[], [{ total: 0 }]]);
 
     await searchVendors({
+      latitude: 6.5244,
+      longitude: 3.3792,
       categoryId: "category-1",
     });
 
-    expect(mockPrisma.vendorProfile.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({
-          categories: {
-            some: { categoryId: "category-1" },
-          },
-        }),
-      }),
-    );
+    const query = mockPrisma.$queryRaw.mock.calls[0][0];
+
+    expect(query.sql).toContain("vendor_categories");
+    expect(query.values).toContain("category-1");
   });
 
-  it("filters vendors by service", async () => {
-    mockPrisma.$transaction.mockResolvedValue([[], 0]);
+  it("includes the service filter in the database query", async () => {
+    mockPrisma.$transaction.mockResolvedValue([[], [{ total: 0 }]]);
 
     await searchVendors({
+      latitude: 6.5244,
+      longitude: 3.3792,
       serviceId: "service-1",
     });
 
-    expect(mockPrisma.vendorProfile.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({
-          services: {
-            some: { id: "service-1" },
-          },
-        }),
-      }),
-    );
+    const query = mockPrisma.$queryRaw.mock.calls[0][0];
+
+    expect(query.sql).toContain("services");
+    expect(query.values).toContain("service-1");
   });
 
   it("applies pagination and calculates total pages", async () => {
-    mockPrisma.$transaction.mockResolvedValue([[{ id: "vendor-1" }], 23]);
+    mockPrisma.$transaction.mockResolvedValue([
+      [{ id: "vendor-1", distanceKm: 12.34 }],
+      [{ total: 23 }],
+    ]);
+
+    mockPrisma.vendorProfile.findMany.mockResolvedValue([
+      {
+        id: "vendor-1",
+        businessName: "Test Vendor",
+        categories: [],
+        services: [],
+      },
+    ]);
 
     const result = await searchVendors({
+      latitude: 6.5244,
+      longitude: 3.3792,
       page: 2,
       limit: 10,
     });
 
-    expect(mockPrisma.vendorProfile.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        skip: 10,
-        take: 10,
-      }),
-    );
+    const distanceQuery = mockPrisma.$queryRaw.mock.calls[0][0];
+
+    expect(distanceQuery.sql).toContain("LIMIT");
+    expect(distanceQuery.sql).toContain("OFFSET");
+    expect(distanceQuery.values).toContain(10);
 
     expect(result.pagination).toEqual({
       page: 2,
@@ -107,27 +106,25 @@ describe("Vendor search service", () => {
       total: 23,
       totalPages: 3,
     });
+
+    expect(result.vendors[0].distanceKm).toBe(12.34);
   });
 
   it("combines category and service filters", async () => {
-    mockPrisma.$transaction.mockResolvedValue([[], 0]);
+    mockPrisma.$transaction.mockResolvedValue([[], [{ total: 0 }]]);
 
     await searchVendors({
+      latitude: 6.5244,
+      longitude: 3.3792,
       categoryId: "category-1",
       serviceId: "service-1",
     });
 
-    expect(mockPrisma.vendorProfile.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({
-          categories: {
-            some: { categoryId: "category-1" },
-          },
-          services: {
-            some: { id: "service-1" },
-          },
-        }),
-      }),
-    );
+    const query = mockPrisma.$queryRaw.mock.calls[0][0];
+
+    expect(query.sql).toContain("vendor_categories");
+    expect(query.sql).toContain("services");
+    expect(query.values).toContain("category-1");
+    expect(query.values).toContain("service-1");
   });
 });
