@@ -1,4 +1,4 @@
-import { searchVendors } from "../services/search.service";
+import { searchVendors } from "../services/search.service.js";
 
 export const searchVendorsController = async (req, res, next) => {
   try {

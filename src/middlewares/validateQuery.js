@@ -2,7 +2,7 @@ const validateQuery = (schema) => (req, res, next) => {
   const { error, value } = schema.validate(req.query, {
     abortEarly: false,
     convert: true,
-    stripUknown: false,
+    stripUnknown: false,
   });
 
   if (error) {
@@ -23,7 +23,7 @@ const validateQuery = (schema) => (req, res, next) => {
     return next(validationError);
   }
 
-  req.validateQuery = value;
+  req.validatedQuery = value;
   return next();
 };
 
