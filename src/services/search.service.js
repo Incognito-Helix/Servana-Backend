@@ -2,7 +2,6 @@ import prisma from "../config/prisma.js";
 import { Prisma } from "@prisma/client";
 
 const EARTH_RADIUS_KM = 6371;
-const SEARCH_RADIUS_KM = 50;
 
 export const searchVendors = async ({
   latitude,
@@ -10,15 +9,16 @@ export const searchVendors = async ({
   categoryId,
   serviceId,
   page = 1,
+  radius = 20,
   limit = 10,
 }) => {
   const skip = (page - 1) * limit;
 
   // Bounding box: narrow the candidates before calculating distance.
-  const latitudeDelta = SEARCH_RADIUS_KM / 111.32;
+  const latitudeDelta = radius / 111.32;
   const longitudeDelta = Math.min(
     180,
-    SEARCH_RADIUS_KM /
+    radius /
       (111.32 *
         Math.max(Math.abs(Math.cos((latitude * Math.PI) / 180)), 0.000001)),
   );
@@ -92,7 +92,7 @@ export const searchVendors = async ({
             POWER(
               SIN(
                RADIANS(
-              MOD(vp.longitude - ${longitude} + 540, 360) - 180
+              MOD((vp.longitude - ${longitude} + 540)::numeric, 360) - 180
              ) / 2
           ),
             2
@@ -114,7 +114,7 @@ export const searchVendors = async ({
       ${candidatesCte}
       SELECT id, "distanceKm"
       FROM candidates
-      WHERE "distanceKm" <= ${SEARCH_RADIUS_KM}
+      WHERE "distanceKm" <= ${radius}
       ORDER BY "distanceKm" ASC, id ASC
       LIMIT ${limit}
       OFFSET ${skip}
@@ -123,7 +123,7 @@ export const searchVendors = async ({
       ${candidatesCte}
       SELECT COUNT(*)::int AS total
       FROM candidates
-      WHERE "distanceKm" <= ${SEARCH_RADIUS_KM}
+      WHERE "distanceKm" <= ${radius}
     `),
   ]);
 
@@ -182,20 +182,12 @@ export const searchVendors = async ({
     if (!vendor) return [];
 
     return [
-      {
-        ...vendor,
-        distanceKm: Number(Number(row.distanceKm).toFixed(2)),
-      },
+      { ...vendor, distanceKm: Number(Number(row.distanceKm).toFixed(2)) },
     ];
   });
 
   return {
     vendors,
-    pagination: {
-      page,
-      limit,
-      total,
-      totalPages: Math.ceil(total / limit),
-    },
+    pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
   };
 };

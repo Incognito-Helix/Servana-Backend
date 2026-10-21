@@ -21,6 +21,8 @@ const zoneFields = {
   city: true,
   state: true,
   slug: true,
+  centerLatitude: true,
+  centerLongitude: true,
 };
 
 // Haversine: straight line distance in km between two points on the earth.
@@ -64,11 +66,7 @@ export const suggestLocations = async ({ q, latitude, longitude }, userId) => {
   if (latitude !== undefined) {
     const zones = await prisma.zone.findMany({
       where: { isActive: true },
-      select: {
-        ...zoneFields,
-        centerLatitude: true,
-        centerLongitude: true,
-      },
+      select: { zoneFields },
     });
 
     let closest = null;
@@ -93,6 +91,8 @@ export const suggestLocations = async ({ q, latitude, longitude }, userId) => {
         city: closest.zone.city,
         state: closest.zone.state,
         slug: closest.zone.slug,
+        centerLatitude: closest.zone.centerLatitude,
+        centerLongitude: closest.zone.centerLongitude,
         distanceKm: Math.round(closest.km * 10) / 10,
       };
     }
