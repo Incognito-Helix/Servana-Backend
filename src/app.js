@@ -20,6 +20,10 @@ app.use(
 );
 
 app.use(express.json());
+app.use((req, _res, next) => {
+  req.body = req.body ?? {};
+  next();
+});
 
 app.get("/health", (req, res) => {
   res.status(200).json({
