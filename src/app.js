@@ -8,6 +8,7 @@ import "dotenv/config";
 import adminRoutes from "./routes/admin.routes.js";
 import searchRoutes from "./routes/search.routes.js";
 import locationRoutes from "./routes/location.routes.js";
+import uploadRoutes from "./routes/upload.js";
 
 const app = express();
 
@@ -20,6 +21,7 @@ app.use(
 );
 
 app.use(express.json());
+app.use("/api/uploads", uploadRoutes);
 app.use((req, _res, next) => {
   req.body = req.body ?? {};
   next();
