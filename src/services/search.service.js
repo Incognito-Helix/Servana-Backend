@@ -57,12 +57,14 @@ export const searchVendors = async ({
   longitude,
   categoryId,
   serviceId,
-  radiusKm = DEFAULT_SEARCH_RADIUS_KM,
+  radiusKm,
+  radius,
   page = 1,
   limit = 10,
 }) => {
+  const requestedRadius = radiusKm ?? radius ?? DEFAULT_SEARCH_RADIUS_KM;
   const effectiveRadiusKm = Math.min(
-    Math.max(Number(radiusKm) || DEFAULT_SEARCH_RADIUS_KM, 1),
+    Math.max(Number(requestedRadius) || DEFAULT_SEARCH_RADIUS_KM, 1),
     MAX_SEARCH_RADIUS_KM,
   );
 
@@ -103,14 +105,10 @@ export const searchVendors = async ({
     ? Prisma.sql`AND ${Prisma.join(filters, " AND ")}`
     : Prisma.empty;
 
-  // Boosts are category-specific. Without a selected category,
-  // no vendor receives paid ranking priority.
   const boostCategoryFilter = categoryId
     ? Prisma.sql`AND b."categoryId" = ${categoryId}`
     : Prisma.sql`AND 1 = 0`;
 
-  // Only boosts targeting the nearest eligible active zone can
-  // receive priority in this search.
   const boostZoneFilter = nearestZone
     ? Prisma.sql`
         AND EXISTS (
@@ -159,7 +157,7 @@ export const searchVendors = async ({
     }
   }
 
-  const resultRows = await prisma.$queryRaw(Prisma.sql`
+  const candidatesCte = Prisma.sql`
     WITH candidates AS (
       SELECT
         vp.id,
@@ -178,7 +176,7 @@ export const searchVendors = async ({
               POWER(
                 SIN(
                   RADIANS(
-                    MOD(vp.longitude - ${longitude} + 540, 360) - 180
+                    MOD((vp.longitude - ${longitude} + 540)::numeric, 360) - 180
                   ) / 2
                 ),
                 2
@@ -198,7 +196,11 @@ export const searchVendors = async ({
           OR vp."worksRemotely" = TRUE
         )
         ${optionalFilters}
-    ),
+    )
+  `;
+
+  const resultRows = await prisma.$queryRaw(Prisma.sql`
+    ${candidatesCte},
     eligible AS (
       SELECT
         c.*,
@@ -250,14 +252,10 @@ export const searchVendors = async ({
       FROM eligible
     ),
     sponsored AS (
-      SELECT
-        id,
-        "boostRankGroup"
+      SELECT id, "boostRankGroup"
       FROM ranked
       WHERE "boostRankGroup" IN (1, 2)
-      ORDER BY
-        "boostRankGroup" ASC,
-        "groupPosition" ASC
+      ORDER BY "boostRankGroup" ASC, "groupPosition" ASC
       LIMIT ${MAX_SPONSORED_SEARCH_RESULTS}
     ),
     final_ranked AS (
@@ -293,40 +291,13 @@ export const searchVendors = async ({
   `);
 
   const countRows = await prisma.$queryRaw(Prisma.sql`
+    ${candidatesCte}
     SELECT COUNT(*)::int AS total
-    FROM vendor_profiles vp
-    WHERE vp.status = 'approved'
-      AND (
-        (
-          vp.latitude IS NOT NULL
-          AND vp.longitude IS NOT NULL
-          AND vp.latitude BETWEEN ${minLatitude} AND ${maxLatitude}
-          ${longitudeFilter}
-        )
-        OR vp."worksRemotely" = TRUE
-      )
-      ${optionalFilters}
-      AND (
-        vp."worksRemotely" = TRUE
-        OR (
-          ${EARTH_RADIUS_KM} * 2 * ASIN(SQRT(LEAST(1.0,
-            POWER(
-              SIN(RADIANS(vp.latitude - ${latitude}) / 2),
-              2
-            ) +
-            COS(RADIANS(${latitude})) *
-            COS(RADIANS(vp.latitude)) *
-            POWER(
-              SIN(
-                RADIANS(
-                  MOD(vp.longitude - ${longitude} + 540, 360) - 180
-                ) / 2
-              ),
-              2
-            )
-          ))) <= ${effectiveRadiusKm}
-        )
-      )
+    FROM candidates c
+    WHERE (
+      c."worksRemotely" = TRUE
+      OR c."distanceKm" <= ${effectiveRadiusKm}
+    )
   `);
 
   const total = countRows[0]?.total ?? 0;
@@ -393,11 +364,6 @@ export const searchVendors = async ({
 
   return {
     vendors,
-    pagination: {
-      page,
-      limit,
-      total,
-      totalPages: Math.ceil(total / limit),
-    },
+    pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
   };
 };
