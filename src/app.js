@@ -11,6 +11,7 @@ import locationRoutes from "./routes/location.routes.js";
 import uploadRoutes from "./routes/upload.js";
 
 const app = express();
+app.set("trust proxy", 1);
 
 app.use(
   cors({
@@ -19,6 +20,18 @@ app.use(
     allowedHeaders: ["Content-Type", "Authorization", "X-CSRF-Token"],
   }),
 );
+
+app.use((req, res, next) => {
+  if (req.path === "/health") return next();
+
+  const start = Date.now();
+  res.on("finish", () => {
+    console.log(
+      `${req.method} ${req.originalUrl.split("?")[0]} ${res.statusCode} ${Date.now() - start}ms`,
+    );
+  });
+  next();
+});
 
 app.use(express.json());
 app.use("/api/uploads", uploadRoutes);

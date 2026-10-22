@@ -1,5 +1,6 @@
 import bcrypt from "bcrypt";
 import prisma from "../config/prisma.js";
+import { issueEmailOtp } from "../services/emailOtp.service.js";
 
 const sendError = (next, message, statusCode, code, fieldErrors = {}) => {
   const error = new Error(message);
@@ -36,7 +37,7 @@ const register = async (req, res, next) => {
       where: { email: normalizedEmail },
     });
 
-    if (existingUser) {
+    if (existingUser?.emailVerified) {
       return sendError(
         next,
         "Email is already registered.",
@@ -59,33 +60,43 @@ const register = async (req, res, next) => {
     // Hash the password before saving it.
     const passwordHash = await bcrypt.hash(password, 12);
 
-    const user = await prisma.user.create({
-      data: {
-        firstName: normalizedFirstName,
-        lastName: normalizedLastName,
-        email: normalizedEmail,
-        passwordHash,
-        role,
-        emailVerified: false,
-        termsVersion: process.env.TERMS_VERSION || "V1",
-        termsAcceptedAt: new Date(),
-      },
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        email: true,
-        role: true,
-        emailVerified: true,
-        termsVersion: true,
-        termsAcceptedAt: true,
-        createdAt: true,
-      },
-    });
+    const userFields = {
+      firstName: normalizedFirstName,
+      lastName: normalizedLastName,
+      email: normalizedEmail,
+      passwordHash,
+      role,
+      emailVerified: false,
+      termsVersion: process.env.TERMS_VERSION || "V1",
+      termsAcceptedAt: new Date(),
+    };
+
+    const select = {
+      id: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+      role: true,
+      emailVerified: true,
+      termsVersion: true,
+      termsAcceptedAt: true,
+      createdAt: true,
+    };
+
+    const user = existingUser
+      ? await prisma.user.update({
+          where: { id: existingUser.id },
+          data: userFields,
+          select,
+        })
+      : await prisma.user.create({ data: userFields, select });
+
+    await issueEmailOtp(user);
 
     return res.status(201).json({
       success: true,
-      message: "Account created successfully. Please verify your email.",
+      message:
+        "Account created successfully. We sent a verification code to your email",
       data: user,
     });
   } catch (error) {

@@ -9,7 +9,7 @@ const searchQuerySchema = Joi.object({
   }),
 
   longitude: Joi.number().min(-180).max(180).required().messages({
-    "number.base": "Longititude must be a number.",
+    "number.base": "Longitude must be a number.",
     "number.min": "Longitude must be between -180 and 180.",
     "number.max": "Longitude must be between -180 and 180.",
     "any.required": "Longitude is required.",
@@ -19,8 +19,15 @@ const searchQuerySchema = Joi.object({
 
   serviceId: Joi.string().trim().min(1).optional(),
 
+  radiusKm: Joi.number().min(1).max(50).default(10).messages({
+    "number.base": "Search radius must be a number.",
+    "number.min": "Search radius must be at least 1 km.",
+    "number.max": "Search radius cannot exceed 50 km.",
+  }),
+
   page: Joi.number().integer().min(1).default(1),
 
+  radius: Joi.number().positive().max(50).default(10),
   limit: Joi.number().integer().min(1).max(50).default(10),
 }).unknown(false);
 
