@@ -5,7 +5,7 @@ import { sendEmail } from "./email.service.js";
 const otpExpiresIn = 10;
 
 export const issueEmailOtp = async (user) => {
-  const otp = crypto.randomInt(100000, 100000).toString();
+  const otp = crypto.randomInt(100000, 1000000).toString();
   const otpHash = crypto.createHash("sha256").update(otp).digest("hex");
   const expiresAt = new Date(Date.now() + otpExpiresIn * 60 * 1000);
 
