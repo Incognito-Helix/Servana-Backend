@@ -19,6 +19,18 @@ app.use(
   }),
 );
 
+app.use((req, res, next) => {
+  if (req.path === "/health") return next();
+
+  const start = Date.now();
+  res.on("finish", () => {
+    console.log(
+      `${req.method} ${req.originalUrl.split("?")[0]} ${res.statusCode} ${Date.now() - start}ms`,
+    );
+  });
+  next();
+});
+
 app.use(express.json());
 
 app.get("/health", (req, res) => {
