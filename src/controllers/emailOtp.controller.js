@@ -1,8 +1,6 @@
 import crypto from "node:crypto";
-import { sendEmail } from "../services/email.service.js";
+import { issueEmailOtp } from "../services/emailOtp.service.js";
 import prisma from "../config/prisma.js";
-
-const OTP_EXPIRY_MINUTES = 10;
 
 const sendMessage = (status, code, message, fieldErrors) => {
   const error = new Error(message);
@@ -39,37 +37,7 @@ const sendEmailOtp = async (req, res, next) => {
         ),
       );
 
-    const otp = crypto.randomInt(100000, 1000000).toString();
-    const otpHash = crypto.createHash("sha256").update(otp).digest("hex");
-    const expiresAt = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
-
-    await prisma.$transaction(async (tx) => {
-      // Invalidate previous unused email OTPs for this user.
-      await tx.authToken.updateMany({
-        where: {
-          userId: user.id,
-          type: "email_otp",
-          usedAt: null,
-        },
-        data: { usedAt: new Date() },
-      });
-
-      await tx.authToken.create({
-        data: {
-          userId: user.id,
-          type: "email_otp",
-          tokenHash: otpHash,
-          expiresAt,
-        },
-      });
-    });
-
-    sendEmail({
-      to: user.email,
-      subject: "Verify your Servana email",
-      text: `Your Servana verification code is ${otp}. It expires in 10 minutes.`,
-      html: `<p>Your Servana verification code is:</p><h2>${otp}</h2><p>This code expires in 10 minutes. Do not share it with anyone.</p>`,
-    });
+    await issueEmailOtp(user);
 
     return res.status(200).json({
       success: true,
