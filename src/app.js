@@ -10,6 +10,7 @@ import searchRoutes from "./routes/search.routes.js";
 import locationRoutes from "./routes/location.routes.js";
 
 const app = express();
+app.set("trust proxy", 1);
 
 app.use(
   cors({
