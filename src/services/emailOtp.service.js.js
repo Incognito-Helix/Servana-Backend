@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import prisma from "../config/prisma.js";
-import { sendEmail } from "../services/email.service.js";
+import { sendEmail } from "./email.service.js";
 
 const otpExpiresIn = 10;
 
