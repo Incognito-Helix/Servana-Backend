@@ -8,6 +8,28 @@ const MAX_SEARCH_RADIUS_KM = 50;
 export const MAX_SPONSORED_SEARCH_RESULTS = 3;
 export const MAX_SPONSORED_POPULAR_RESULTS = 8;
 
+const nariaToStoredPrice = 1;
+
+const getLagosNow = () => {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Africa/Lagos",
+      weekday: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    })
+      .formatToParts(new Date())
+      .map(({ type, value }) => [type, value]),
+  );
+  const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+  return {
+    dayOfWeek: weekdays.indexOf(parts.weekday),
+    time: `${parts.hour}: ${parts.minute}`,
+  };
+};
+
 const calculateDistanceKm = (lat1, lon1, lat2, lon2) => {
   const toRadians = (degrees) => (degrees * Math.PI) / 180;
   const latitudeDifference = toRadians(lat2 - lat1);
@@ -59,6 +81,11 @@ export const searchVendors = async ({
   serviceId,
   radiusKm,
   radius,
+  minPrice,
+  maxPrice,
+  minRating,
+  homeService,
+  openNow,
   page = 1,
   limit = 10,
 }) => {
@@ -97,6 +124,53 @@ export const searchVendors = async ({
         FROM services s
         WHERE s."profileId" = vp.id
           AND s.id = ${serviceId}
+      )
+    `);
+  }
+  if (homeService === true)
+    filters.push(Prisma.sql`vp."offersHomeService" = TRUE`);
+
+  if (minRating != null)
+    filters.push(Prisma.sql`vp."avgRating" >= ${minRating}`);
+
+  if (minPrice != null || maxPrice != null) {
+    const priceChecks = [];
+
+    if (minPrice != null) {
+      priceChecks.push(
+        Prisma.sql`sp."priceMin" >= ${minPrice * nariaToStoredPrice}`,
+      );
+    }
+
+    if (maxPrice != null) {
+      priceChecks.push(
+        Prisma.sql`sp."priceMin" <= ${maxPrice * nariaToStoredPrice}`,
+      );
+    }
+
+    filters.push(Prisma.sql`
+      EXISTS (
+        SELECT 1
+        FROM services sp
+        WHERE sp."profileId" = vp.id
+          AND ${Prisma.join(priceChecks, " AND ")}
+      )
+    `);
+  }
+
+  // Open now uses each vendor's own hours, in Lagos time.
+  if (openNow === true) {
+    const lagosNow = getLagosNow();
+
+    filters.push(Prisma.sql`
+      EXISTS (
+        SELECT 1
+        FROM working_hours wh
+        WHERE wh."profileId" = vp.id
+          AND wh."dayOfWeek" = ${lagosNow.dayOfWeek}
+          AND wh."isClosed" = FALSE
+          AND wh."openTime" <= ${lagosNow.time}
+          AND wh."closeTime" > ${lagosNow.time}
       )
     `);
   }
