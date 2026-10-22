@@ -86,6 +86,7 @@ export const searchVendors = async ({
   minRating,
   homeService,
   openNow,
+  rotationSeed,
   page = 1,
   limit = 10,
 }) => {
@@ -268,13 +269,22 @@ export const searchVendors = async ({
             ${longitudeFilter}
           )
           OR vp."worksRemotely" = TRUE
+          or exists (
+          select 1 from boosts b
+          where b."profileId" = vp.id
+          and b.status = 'active'
+          and b."startAt" <= ${now}
+          and b."endAt" >= ${now}
+          ${boostCategoryFilter}
+          ${boostZoneFilter}
+          )
         )
         ${optionalFilters}
     )
   `;
+  const rotationKey = String(rotationSeed);
 
-  const resultRows = await prisma.$queryRaw(Prisma.sql`
-    ${candidatesCte},
+  const rankingCtes = Prisma.sql`
     eligible AS (
       SELECT
         c.*,
@@ -304,32 +314,19 @@ export const searchVendors = async ({
           ELSE 3
         END AS "boostRankGroup"
       FROM candidates c
-      WHERE (
-        c."worksRemotely" = TRUE
-        OR c."distanceKm" <= ${effectiveRadiusKm}
-      )
     ),
     ranked AS (
-      SELECT
-        eligible.*,
-        ROW_NUMBER() OVER (
-          PARTITION BY "boostRankGroup"
-          ORDER BY
-            CASE WHEN "worksRemotely" THEN 1 ELSE 0 END ASC,
-            CASE
-              WHEN "worksRemotely" THEN NULL
-              ELSE "distanceKm"
-            END ASC NULLS LAST,
-            "avgRating" DESC,
-            id ASC
-        ) AS "groupPosition"
+      SELECT eligible.*
       FROM eligible
+      WHERE eligible."worksRemotely" = TRUE
+        OR eligible."distanceKm" <= ${effectiveRadiusKm}
+        OR eligible."boostRankGroup" IN (1, 2)
     ),
     sponsored AS (
       SELECT id, "boostRankGroup"
       FROM ranked
       WHERE "boostRankGroup" IN (1, 2)
-      ORDER BY "boostRankGroup" ASC, "groupPosition" ASC
+      ORDER BY "boostRankGroup" ASC, md5(id || ${rotationKey}::text) ASC
       LIMIT ${MAX_SPONSORED_SEARCH_RESULTS}
     ),
     final_ranked AS (
@@ -342,7 +339,15 @@ export const searchVendors = async ({
         (s.id IS NOT NULL) AS sponsored
       FROM ranked r
       LEFT JOIN sponsored s ON s.id = r.id
+      WHERE s.id IS NOT NULL
+        OR r."worksRemotely" = TRUE
+        OR r."distanceKm" <= ${effectiveRadiusKm}
     )
+  `;
+
+  const resultRows = await prisma.$queryRaw(Prisma.sql`
+    ${candidatesCte},
+    ${rankingCtes}
     SELECT
       r.id,
       r."distanceKm",
@@ -353,6 +358,9 @@ export const searchVendors = async ({
     FROM final_ranked r
     ORDER BY
       r."rankGroup" ASC,
+      CASE
+        WHEN r.sponsored THEN md5(r.id || ${rotationKey}::text)
+      END ASC NULLS LAST,
       CASE WHEN r."worksRemotely" THEN 1 ELSE 0 END ASC,
       CASE
         WHEN r."worksRemotely" THEN NULL
@@ -365,13 +373,10 @@ export const searchVendors = async ({
   `);
 
   const countRows = await prisma.$queryRaw(Prisma.sql`
-    ${candidatesCte}
+    ${candidatesCte},
+    ${rankingCtes}
     SELECT COUNT(*)::int AS total
-    FROM candidates c
-    WHERE (
-      c."worksRemotely" = TRUE
-      OR c."distanceKm" <= ${effectiveRadiusKm}
-    )
+    FROM final_ranked
   `);
 
   const total = countRows[0]?.total ?? 0;

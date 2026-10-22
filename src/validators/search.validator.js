@@ -36,6 +36,7 @@ const searchQuerySchema = Joi.object({
     "boolean.base": "home service must be true or false",
   }),
   openNow: Joi.boolean(),
+  rotationSeed: Joi.number().integer().min(0).max(2147483647),
   page: Joi.number().integer().min(1).default(1),
   limit: Joi.number().integer().min(1).max(50).default(10),
 }).unknown(false);
