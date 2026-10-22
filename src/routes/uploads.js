@@ -78,7 +78,7 @@ router.post("/confirm", async (req, res) => {
         }),
       },
     });
-  } catch (e) {
+  } catch {
     res.status(404).json({ error: "Upload not found." });
   }
 });
