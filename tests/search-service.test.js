@@ -1,4 +1,3 @@
-
 import {
   afterEach,
   beforeEach,
@@ -182,7 +181,6 @@ describe("Vendor search service", () => {
       categoryId: "category-1",
     });
 
-
     const query = mockPrisma.$queryRaw.mock.calls[0][0];
 
     expect(query.sql).toContain('"rankGroup"');
@@ -191,7 +189,6 @@ describe("Vendor search service", () => {
     expect(query.sql).toContain('"avgRating"');
     expect(query.sql).toContain("ORDER BY");
   });
-
 
   it("enforces a maximum of three sponsored search results", async () => {
     await searchVendors({
@@ -211,10 +208,9 @@ describe("Vendor search service", () => {
     expect(query.values).toContain(3);
 
     // Vendors outside the sponsored selection fall back to organic rank.
-    expect(query.sql).toContain('ELSE 3');
+    expect(query.sql).toContain("ELSE 3");
     expect(query.sql).toContain("(s.id IS NOT NULL) AS sponsored");
   });
-
 
   it("ranks local vendors before remote vendors and uses ratings for remote ordering", async () => {
     await searchVendors({

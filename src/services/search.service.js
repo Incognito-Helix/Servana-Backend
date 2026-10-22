@@ -1,4 +1,3 @@
-
 import prisma from "../config/prisma.js";
 import { Prisma } from "@prisma/client";
 
@@ -128,10 +127,7 @@ export const searchVendors = async ({
     180,
     effectiveRadiusKm /
       (111.32 *
-        Math.max(
-          Math.abs(Math.cos((latitude * Math.PI) / 180)),
-          0.000001,
-        )),
+        Math.max(Math.abs(Math.cos((latitude * Math.PI) / 180)), 0.000001)),
   );
 
   const minLatitude = Math.max(-90, latitude - latitudeDelta);

@@ -1,4 +1,3 @@
-
 import Joi from "joi";
 
 const searchQuerySchema = Joi.object({
