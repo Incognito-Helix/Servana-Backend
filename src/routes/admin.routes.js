@@ -17,14 +17,14 @@ router.get(
 );
 
 router.patch(
-  "/vendor-reviews//approve",
+  "/vendor-reviews/:profileId/approve",
   auth,
   requireRole("admin"),
   approveVendorProfileController,
 );
 
 router.patch(
-  "/vendor-reviews//reject",
+  "/vendor-reviews/:profileId/reject",
   auth,
   requireRole("admin"),
   rejectVendorProfileController,
