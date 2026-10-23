@@ -52,7 +52,10 @@ export const createReview = async (customerId, profileId, data) => {
         },
       });
       const aggregate = await tx.review.aggregate({
-        where: { profileId },
+        where: {
+          profileId,
+          moderationStatus: "visible",
+        },
         _avg: { rating: true },
         _count: { _all: true },
       });
@@ -94,6 +97,7 @@ export const listReviews = async (profileId, query) => {
   const limit = query.limit ?? 10;
   const where = {
     profileId,
+    moderationStatus: "visible",
     ...(query.rating ? { rating: query.rating } : {}),
   };
 
@@ -115,9 +119,10 @@ export const listReviews = async (profileId, query) => {
         rating: true,
         comment: true,
         createdAt: true,
-        customer: {
-          select: { firstName: true, lastName: true },
-        },
+
+        customer: { select: { firstName: true, lastName: true } },
+
+        reply: { select: { message: true, createdAt: true } },
       },
     }),
     prisma.review.count({ where }),
@@ -236,4 +241,3 @@ export const reportReview = async (reporterId, reviewId, reason) => {
     throw error;
   }
 };
-
