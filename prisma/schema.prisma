@@ -34,7 +34,7 @@ model User {
   // FUTURE (Auth step): authTokens AuthToken[], hashed email OTPs and password reset tokens
   // FUTURE (Auth step): recentLocations UserRecentLocation[], last 3 locations per customer
   // FUTURE (Vendor step): vendorProfile VendorProfile?, one profile per vendor
-  // FUTURE (Reviews step): reviews Review[], written by customers
+  // Customer reviews are defined by the Review relation below.
   // FUTURE (Contact step): contactReveals ContactReveal[]
   // FUTURE (Payments step): payments Payment[]
   // FUTURE (Dashboard step): profileEvents ProfileEvent[], viewerId is nullable for visitors
@@ -43,6 +43,9 @@ model User {
   authTokens          AuthToken[]
   userRecentLocations UserRecentLocation[]
   vendorProfile       VendorProfile?
+  contactReveals      ContactReveal[]
+  profileEvents       ProfileEvent[]
+  reviews             Review[]             @relation("CustomerReviews")
 
   @@map("users")
 }
@@ -190,6 +193,8 @@ model VendorProfile {
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
   boosts            Boost[]
+  contactReveals    ContactReveal[]
+  events            ProfileEvent[]
   user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   zone              Zone?            @relation(fields: [zoneId], references: [id])
   categories        VendorCategory[]
@@ -198,6 +203,7 @@ model VendorProfile {
   services          Service[]
   portfolioImages   PortfolioImage[]
   workingHours      WorkingHours[]
+  reviews           Review[]
 
   @@index([latitude, longitude])
   @@index([zoneId])
@@ -294,9 +300,10 @@ model Boost {
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
 
-  profile  VendorProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  category Category      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  zones    BoostZone[]
+  profile       VendorProfile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  category      Category       @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  zones         BoostZone[]
+  profileEvents ProfileEvent[]
 
   @@index([status, type, startAt, endAt])
   @@index([profileId, status])
@@ -315,4 +322,67 @@ model BoostZone {
   @@unique([boostId, zoneId])
   @@index([zoneId])
   @@map("boost_zones")
+}
+
+enum HiredResponse {
+  yes
+  no
+}
+
+enum ProfileEventType {
+  impression
+  view
+  contact_tap
+}
+
+model ContactReveal {
+  id              String         @id @default(uuid())
+  profileId       String
+  customerId      String
+  firstRevealedAt DateTime       @default(now())
+  followupSentAt  DateTime?
+  hiredResponse   HiredResponse?
+
+  profile  VendorProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  customer User          @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, customerId])
+  @@index([customerId])
+  @@map("contact_reveals")
+}
+
+model ProfileEvent {
+  id        String           @id @default(uuid())
+  profileId String
+  type      ProfileEventType
+  boostId   String?
+  viewerId  String?
+  createdAt DateTime         @default(now())
+
+  profile VendorProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  boost   Boost?        @relation(fields: [boostId], references: [id], onDelete: SetNull)
+  viewer  User?         @relation(fields: [viewerId], references: [id], onDelete: SetNull)
+
+  @@index([profileId, createdAt])
+  @@index([boostId])
+  @@index([viewerId, type, createdAt])
+  @@map("profile_events")
+}
+
+model Review {
+  id         String   @id @default(uuid())
+  profileId  String
+  customerId String
+  rating     Int
+  comment    String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  profile  VendorProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  customer User          @relation("CustomerReviews", fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, customerId])
+  @@index([profileId, createdAt])
+  @@index([profileId, rating])
+  @@map("reviews")
 }

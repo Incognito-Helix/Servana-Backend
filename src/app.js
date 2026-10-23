@@ -9,6 +9,7 @@ import adminRoutes from "./routes/admin.routes.js";
 import searchRoutes from "./routes/search.routes.js";
 import locationRoutes from "./routes/location.routes.js";
 import { httpLogger } from "./middlewares/logger.js";
+import uploadRoutes from "./routes/uploads.js";
 
 const app = express();
 app.set("trust proxy", 1);
@@ -23,6 +24,7 @@ app.use(
 );
 
 app.use(express.json());
+app.use("/api/uploads", uploadRoutes);
 app.use((req, _res, next) => {
   req.body = req.body ?? {};
   next();

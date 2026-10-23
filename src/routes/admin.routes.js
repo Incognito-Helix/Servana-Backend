@@ -6,6 +6,12 @@ import {
   approveVendorProfileController,
   rejectVendorProfileController,
 } from "../controllers/admin.controller.js";
+import validate from "../middlewares/validate.js";
+import { createBoostSchema } from "../validators/boost.validator.js";
+import {
+  createBoostController,
+  cancelBoostController,
+} from "../controllers/boost.controller.js";
 
 const router = express.Router();
 
@@ -28,6 +34,21 @@ router.patch(
   auth,
   requireRole("admin"),
   rejectVendorProfileController,
+);
+
+router.post(
+  "/boosts",
+  auth,
+  requireRole("admin"),
+  validate(createBoostSchema),
+  createBoostController,
+);
+
+router.patch(
+  "/boosts/:boostId/cancel",
+  auth,
+  requireRole("admin"),
+  cancelBoostController,
 );
 
 export default router;

@@ -39,6 +39,22 @@ import {
 
 import { signUpload } from "../controllers/upload.controller.js";
 
+import {
+  revealContactController,
+  contactTapController,
+} from "../controllers/contact.controller.js";
+
+import {
+  createReviewController,
+  listReviewsController,
+} from "../controllers/review.controller.js";
+
+import {
+  createReviewSchema,
+  listReviewsQuerySchema,
+} from "../validators/review.validator.js";
+import validateQuery from "../middlewares/validateQuery.js";
+
 const router = express.Router();
 
 // "/profile" must stay above "/:id", or Express would read "profile" as an id.
@@ -59,6 +75,20 @@ router.patch(
   requireOwnership((req) => getProfileOwnerId(req.params.id)),
   validate(updateVendorProfileSchema),
   updateVendorProfile,
+);
+
+router.post(
+  "/:id/reviews",
+  auth,
+  requireRole("customer"),
+  validate(createReviewSchema),
+  createReviewController,
+);
+
+router.get(
+  "/:id/reviews",
+  validateQuery(listReviewsQuerySchema),
+  listReviewsController,
 );
 
 router.post(
@@ -112,6 +142,8 @@ router.put(
   validate(workingHoursListSchema),
   saveVendorWorkingHours,
 );
+router.post("/:id/contact", auth, revealContactController);
+router.post("/:id/contact-tap", auth, contactTapController);
 
 router.get("/:id/working-hours", getVendorWorkingHours);
 
