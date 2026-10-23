@@ -26,3 +26,7 @@ export const listReviewsQuerySchema = Joi.object({
 export const createReviewReplySchema = Joi.object({
   message: Joi.string().trim().min(1).max(500).required(),
 }).unknown(false);
+
+export const reportReviewSchema = Joi.object({
+  reason: Joi.string().trim().min(1).max(500).required(),
+}).unknown(false);

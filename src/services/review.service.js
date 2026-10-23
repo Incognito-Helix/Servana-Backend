@@ -197,3 +197,42 @@ export const createReviewReply = async (vendorId, reviewId, message) => {
     throw error;
   }
 };
+
+export const reportReview = async (reporterId, reviewId, reason) => {
+  const review = await prisma.review.findUnique({
+    where: { id: reviewId },
+    select: { id: true, moderationStatus: true },
+  });
+  if (!review || review.moderationStatus === "hidden")
+    throw httpError(404, "REVIEW_NOT_FOUND", "Review not found");
+
+  const reporter = await prisma.user.findUnique({
+    where: { id: reporterId },
+    select: { role: true, status: true },
+  });
+
+  if (
+    !reporter ||
+    reporter.status !== "active" ||
+    ["customer", "vendor"].includes(reporter.role)
+  )
+    throw httpError(
+      404,
+      "FORBIDDEN",
+      "only active customers and vendors can report reviews",
+    );
+
+  try {
+    return await prisma.reviewReport.create({
+      data: { reviewId, reporterId, reason },
+    });
+  } catch (error) {
+    if (error.code === "P2002")
+      throw httpError(
+        409,
+        "REPORT_ALREADY_EXISTS",
+        "You have already reported this review.",
+      );
+    throw error;
+  }
+};

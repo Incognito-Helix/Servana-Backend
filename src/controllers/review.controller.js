@@ -1,8 +1,8 @@
--- Active: 1791226795682@@127.0.0.1@5432
 import {
   createReview,
   listReviews,
   createReviewReply,
+  reportReview,
 } from "../services/review.service.js";
 
 export const createReviewController = async (req, res, next) => {
@@ -41,5 +41,29 @@ export const createReviewReplyController = async (req, res, next) => {
     return res.status(201).json({ success: true, data: { reply } });
   } catch (error) {
     next(error);
+  }
+};
+
+export const reportReviewController = async (req, res, next) => {
+  try {
+    const report = await reportReview(
+      req.user.id,
+      req.params.id,
+      req.body.reason,
+    );
+
+    return res.status(201).json({
+      success: true,
+      message: "Review reported successfully.",
+      data: {
+        report: {
+          id: report.id,
+          reviewId: report.reviewId,
+          createdAt: report.createdAt,
+        },
+      },
+    });
+  } catch (error) {
+    return next(error);
   }
 };

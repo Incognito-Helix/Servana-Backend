@@ -3,9 +3,15 @@ import auth from "../middlewares/auth.js";
 import requireRole from "../middlewares/role.js";
 import validate from "../middlewares/validate.js";
 
-import { createReviewReplySchema } from "../validators/review.validator.js";
+import {
+  createReviewReplySchema,
+  reportReviewSchema,
+} from "../validators/review.validator.js";
 
-import { createReviewReplyController } from "../controllers/review.controller.js";
+import {
+  createReviewReplyController,
+  reportReviewController,
+} from "../controllers/review.controller.js";
 
 const router = express.Router();
 
