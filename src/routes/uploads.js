@@ -1,4 +1,3 @@
-cat > src/routes/uploads.js <<'EOF'
 import express from "express";
 import cloudinary from "../config/cloudinary.js";
 
@@ -58,10 +57,9 @@ router.post("/confirm", async (req, res) => {
         medium: cloudinary.url(asset.public_id, { width: 400, height: 400, crop: "fill", gravity: "auto", fetch_format: "auto", quality: "auto", secure: true }),
       },
     });
-  } catch (e) {
+  } catch {
     res.status(404).json({ error: "Upload not found." });
   }
 });
 
 export default router;
-EOF

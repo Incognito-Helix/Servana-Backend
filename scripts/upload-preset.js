@@ -15,14 +15,10 @@ const settings = {
   unsigned: false,
   folder: "servana/uploads",
   allowed_formats: "jpg,png,webp",
-  resource_type: "image",
   use_filename: false,
   unique_filename: true,
   overwrite: false,
-  eager: [
-    { width: 150, height: 150, crop: "fill", gravity: "auto", fetch_format: "auto", quality: "auto" },
-    { width: 400, height: 400, crop: "fill", gravity: "auto", fetch_format: "auto", quality: "auto" },
-  ],
+  eager: [thumb(150), thumb(400)],
   eager_async: true,
 };
 
@@ -38,4 +34,3 @@ try {
     process.exit(1);
   }
 }
-
