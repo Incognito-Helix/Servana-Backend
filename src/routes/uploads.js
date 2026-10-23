@@ -1,5 +1,6 @@
-const express = require("express");
-const cloudinary = require("../config/cloudinary");
+cat > src/routes/uploads.js <<'EOF'
+import express from "express";
+import cloudinary from "../config/cloudinary.js";
 
 const router = express.Router();
 
@@ -14,9 +15,7 @@ router.post("/sign", (req, res) => {
   const { type, size } = req.body || {};
 
   if (!ALLOWED_MIME.includes(type)) {
-    return res
-      .status(400)
-      .json({ error: "Only JPEG, PNG and WebP images are allowed." });
+    return res.status(400).json({ error: "Only JPEG, PNG and WebP images are allowed." });
   }
   if (!Number.isFinite(size) || size <= 0 || size > MAX_BYTES) {
     return res.status(400).json({ error: "File must be 5 MB or smaller." });
@@ -26,7 +25,7 @@ router.post("/sign", (req, res) => {
   const paramsToSign = { timestamp, upload_preset: PRESET, folder: FOLDER };
   const signature = cloudinary.utils.api_sign_request(
     paramsToSign,
-    process.env.CLOUDINARY_API_SECRET,
+    process.env.CLOUDINARY_API_SECRET
   );
 
   res.json({
@@ -40,7 +39,6 @@ router.post("/sign", (req, res) => {
 });
 
 // POST /api/uploads/confirm  { publicId }
-// Backstop: delete anything over 5 MB or with a wrong format.
 router.post("/confirm", async (req, res) => {
   const { publicId } = req.body || {};
   if (!publicId || !publicId.startsWith(FOLDER + "/")) {
@@ -50,37 +48,20 @@ router.post("/confirm", async (req, res) => {
     const asset = await cloudinary.api.resource(publicId);
     if (asset.bytes > MAX_BYTES || !ALLOWED_FORMATS.includes(asset.format)) {
       await cloudinary.uploader.destroy(publicId);
-      return res
-        .status(400)
-        .json({ error: "File rejected: wrong type or over 5 MB." });
+      return res.status(400).json({ error: "File rejected: wrong type or over 5 MB." });
     }
     res.json({
       publicId: asset.public_id,
       url: asset.secure_url,
       thumbnails: {
-        small: cloudinary.url(asset.public_id, {
-          width: 150,
-          height: 150,
-          crop: "fill",
-          gravity: "auto",
-          fetch_format: "auto",
-          quality: "auto",
-          secure: true,
-        }),
-        medium: cloudinary.url(asset.public_id, {
-          width: 400,
-          height: 400,
-          crop: "fill",
-          gravity: "auto",
-          fetch_format: "auto",
-          quality: "auto",
-          secure: true,
-        }),
+        small: cloudinary.url(asset.public_id, { width: 150, height: 150, crop: "fill", gravity: "auto", fetch_format: "auto", quality: "auto", secure: true }),
+        medium: cloudinary.url(asset.public_id, { width: 400, height: 400, crop: "fill", gravity: "auto", fetch_format: "auto", quality: "auto", secure: true }),
       },
     });
-  } catch {
+  } catch (e) {
     res.status(404).json({ error: "Upload not found." });
   }
 });
 
 export default router;
+EOF

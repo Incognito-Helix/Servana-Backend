@@ -8,7 +8,7 @@ import "dotenv/config";
 import adminRoutes from "./routes/admin.routes.js";
 import searchRoutes from "./routes/search.routes.js";
 import locationRoutes from "./routes/location.routes.js";
-import uploadRoutes from "./routes/upload.js";
+import uploadRoutes from "./routes/uploads.js";
 
 const app = express();
 app.set("trust proxy", 1);
