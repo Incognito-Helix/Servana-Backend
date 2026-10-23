@@ -22,3 +22,7 @@ export const listReviewsQuerySchema = Joi.object({
     .default("newest"),
   rating: Joi.number().integer().min(1).max(5),
 }).unknown(false);
+
+export const createReviewReplySchema = Joi.object({
+  message: Joi.string().trim().min(1).max(500).required(),
+}).unknown(false);

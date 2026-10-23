@@ -1,4 +1,9 @@
-import { createReview, listReviews } from "../services/review.service.js";
+-- Active: 1791226795682@@127.0.0.1@5432
+import {
+  createReview,
+  listReviews,
+  createReviewReply,
+} from "../services/review.service.js";
 
 export const createReviewController = async (req, res, next) => {
   try {
@@ -23,5 +28,18 @@ export const listReviewsController = async (req, res, next) => {
     });
   } catch (error) {
     return next(error);
+  }
+};
+export const createReviewReplyController = async (req, res, next) => {
+  try {
+    const reply = await createReviewReply(
+      req.user.id,
+      req.params.id,
+      req.body.message,
+    );
+
+    return res.status(201).json({ success: true, data: { reply } });
+  } catch (error) {
+    next(error);
   }
 };

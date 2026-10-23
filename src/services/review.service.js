@@ -133,3 +133,67 @@ export const listReviews = async (profileId, query) => {
     },
   };
 };
+
+export const createReviewReply = async (vendorId, reviewId, message) => {
+  // 1. Check if the review exists
+  const review = await prisma.review.findUnique({
+    where: { id: reviewId },
+    select: { id: true, profile: { select: { userId: true } } },
+  });
+
+  if (!review) throw httpError(404, "REVIEW_NOT_FOUND", "Review not found.");
+
+  // 2. Verify vendor ownership
+  if (review.profile.userId !== vendorId)
+    throw httpError(
+      403,
+      "FORBIDDEN",
+      "You can only reply to reviews on your own profile.",
+    );
+
+  // 3. Check vendor account status
+  const vendor = await prisma.user.findUnique({
+    where: { id: vendorId },
+    select: { role: true, status: true },
+  });
+
+  if (!vendor || vendor.role !== "vendor" || vendor.status !== "active")
+    throw httpError(
+      403,
+      "VENDOR_ONLY",
+      "Only active vendors can reply to reviews.",
+    );
+
+  // 5. Check whether a reply already exists
+  const existingReply = await prisma.reviewReply.findUnique({
+    where: { reviewId },
+  });
+
+  if (existingReply)
+    throw httpError(
+      409,
+      "REPLY_ALREADY_EXISTS",
+      "You have already replied to this review.",
+    );
+
+  // 6. Create the reply
+  try {
+    return await prisma.reviewReply.create({
+      data: {
+        reviewId,
+        message,
+      },
+    });
+  } catch (error) {
+    // Protect against simultaneous duplicate requests
+    if (error.code === "P2002") {
+      throw httpError(
+        409,
+        "REPLY_ALREADY_EXISTS",
+        "You have already replied to this review.",
+      );
+    }
+
+    throw error;
+  }
+};

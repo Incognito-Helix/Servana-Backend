@@ -378,11 +378,23 @@ model Review {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  profile  VendorProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  customer User          @relation("CustomerReviews", fields: [customerId], references: [id], onDelete: Cascade)
+  profile     VendorProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  customer    User          @relation("CustomerReviews", fields: [customerId], references: [id], onDelete: Cascade)
+  reviewReply ReviewReply?
 
   @@unique([profileId, customerId])
   @@index([profileId, createdAt])
   @@index([profileId, rating])
   @@map("reviews")
+}
+
+model ReviewReply {
+  id        String   @id @default(uuid())
+  reviewId  String   @unique
+  message   String   @db.VarChar(500)
+  createdAt DateTime @default(now())
+
+  review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@map("review_replies")
 }
