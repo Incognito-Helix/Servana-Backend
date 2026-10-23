@@ -1,5 +1,5 @@
-const express = require("express");
-const cloudinary = require("../config/cloudinary");
+import express from "express";
+import cloudinary from "../config/cloudinary.js";
 
 const router = express.Router();
 
@@ -40,7 +40,6 @@ router.post("/sign", (req, res) => {
 });
 
 // POST /api/uploads/confirm  { publicId }
-// Backstop: delete anything over 5 MB or with a wrong format.
 router.post("/confirm", async (req, res) => {
   const { publicId } = req.body || {};
   if (!publicId || !publicId.startsWith(FOLDER + "/")) {

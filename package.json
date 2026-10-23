@@ -29,7 +29,9 @@
     "google-auth-library": "^11.3.0",
     "joi": "^18.2.9",
     "jsonwebtoken": "^9.0.3",
-    "pg": "^8.23.1"
+    "pg": "^8.23.1",
+    "pino": "^10.4.0",
+    "pino-http": "^11.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
