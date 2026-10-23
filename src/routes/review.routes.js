@@ -23,4 +23,12 @@ router.post(
   createReviewReplyController,
 );
 
+router.post(
+  "/:id/report",
+  auth,
+  requireRole("customer", "vendor"),
+  validate(reportReviewSchema),
+  reportReviewController,
+);
+
 export default router;

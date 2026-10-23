@@ -9,7 +9,6 @@ import {
   dismissReviewReport,
 } from "../services/reviewModeration.service.js";
 
-
 export const getPendingVendorReviewsController = async (req, res, next) => {
   try {
     const profiles = await getPendingVendorReviews();

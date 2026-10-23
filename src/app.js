@@ -59,7 +59,6 @@ app.use("/search", searchRoutes);
 app.use("/locations", locationRoutes);
 app.use("/reviews", reviewRoutes);
 
-
 app.use(errorHandler);
 
 export default app;
