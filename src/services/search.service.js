@@ -8,6 +8,28 @@ const MAX_SEARCH_RADIUS_KM = 50;
 export const MAX_SPONSORED_SEARCH_RESULTS = 3;
 export const MAX_SPONSORED_POPULAR_RESULTS = 8;
 
+const nariaToStoredPrice = 1;
+
+const getLagosNow = () => {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Africa/Lagos",
+      weekday: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    })
+      .formatToParts(new Date())
+      .map(({ type, value }) => [type, value]),
+  );
+  const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+  return {
+    dayOfWeek: weekdays.indexOf(parts.weekday),
+    time: `${parts.hour}: ${parts.minute}`,
+  };
+};
+
 const calculateDistanceKm = (lat1, lon1, lat2, lon2) => {
   const toRadians = (degrees) => (degrees * Math.PI) / 180;
   const latitudeDifference = toRadians(lat2 - lat1);
@@ -59,6 +81,12 @@ export const searchVendors = async ({
   serviceId,
   radiusKm,
   radius,
+  minPrice,
+  maxPrice,
+  minRating,
+  homeService,
+  openNow,
+  rotationSeed,
   page = 1,
   limit = 10,
 }) => {
@@ -97,6 +125,53 @@ export const searchVendors = async ({
         FROM services s
         WHERE s."profileId" = vp.id
           AND s.id = ${serviceId}
+      )
+    `);
+  }
+  if (homeService === true)
+    filters.push(Prisma.sql`vp."offersHomeService" = TRUE`);
+
+  if (minRating != null)
+    filters.push(Prisma.sql`vp."avgRating" >= ${minRating}`);
+
+  if (minPrice != null || maxPrice != null) {
+    const priceChecks = [];
+
+    if (minPrice != null) {
+      priceChecks.push(
+        Prisma.sql`sp."priceMin" >= ${minPrice * nariaToStoredPrice}`,
+      );
+    }
+
+    if (maxPrice != null) {
+      priceChecks.push(
+        Prisma.sql`sp."priceMin" <= ${maxPrice * nariaToStoredPrice}`,
+      );
+    }
+
+    filters.push(Prisma.sql`
+      EXISTS (
+        SELECT 1
+        FROM services sp
+        WHERE sp."profileId" = vp.id
+          AND ${Prisma.join(priceChecks, " AND ")}
+      )
+    `);
+  }
+
+  // Open now uses each vendor's own hours, in Lagos time.
+  if (openNow === true) {
+    const lagosNow = getLagosNow();
+
+    filters.push(Prisma.sql`
+      EXISTS (
+        SELECT 1
+        FROM working_hours wh
+        WHERE wh."profileId" = vp.id
+          AND wh."dayOfWeek" = ${lagosNow.dayOfWeek}
+          AND wh."isClosed" = FALSE
+          AND wh."openTime" <= ${lagosNow.time}
+          AND wh."closeTime" > ${lagosNow.time}
       )
     `);
   }
@@ -194,13 +269,22 @@ export const searchVendors = async ({
             ${longitudeFilter}
           )
           OR vp."worksRemotely" = TRUE
+          or exists (
+          select 1 from boosts b
+          where b."profileId" = vp.id
+          and b.status = 'active'
+          and b."startAt" <= ${now}
+          and b."endAt" >= ${now}
+          ${boostCategoryFilter}
+          ${boostZoneFilter}
+          )
         )
         ${optionalFilters}
     )
   `;
+  const rotationKey = String(rotationSeed);
 
-  const resultRows = await prisma.$queryRaw(Prisma.sql`
-    ${candidatesCte},
+  const rankingCtes = Prisma.sql`
     eligible AS (
       SELECT
         c.*,
@@ -230,32 +314,19 @@ export const searchVendors = async ({
           ELSE 3
         END AS "boostRankGroup"
       FROM candidates c
-      WHERE (
-        c."worksRemotely" = TRUE
-        OR c."distanceKm" <= ${effectiveRadiusKm}
-      )
     ),
     ranked AS (
-      SELECT
-        eligible.*,
-        ROW_NUMBER() OVER (
-          PARTITION BY "boostRankGroup"
-          ORDER BY
-            CASE WHEN "worksRemotely" THEN 1 ELSE 0 END ASC,
-            CASE
-              WHEN "worksRemotely" THEN NULL
-              ELSE "distanceKm"
-            END ASC NULLS LAST,
-            "avgRating" DESC,
-            id ASC
-        ) AS "groupPosition"
+      SELECT eligible.*
       FROM eligible
+      WHERE eligible."worksRemotely" = TRUE
+        OR eligible."distanceKm" <= ${effectiveRadiusKm}
+        OR eligible."boostRankGroup" IN (1, 2)
     ),
     sponsored AS (
       SELECT id, "boostRankGroup"
       FROM ranked
       WHERE "boostRankGroup" IN (1, 2)
-      ORDER BY "boostRankGroup" ASC, "groupPosition" ASC
+      ORDER BY "boostRankGroup" ASC, md5(id || ${rotationKey}::text) ASC
       LIMIT ${MAX_SPONSORED_SEARCH_RESULTS}
     ),
     final_ranked AS (
@@ -268,7 +339,15 @@ export const searchVendors = async ({
         (s.id IS NOT NULL) AS sponsored
       FROM ranked r
       LEFT JOIN sponsored s ON s.id = r.id
+      WHERE s.id IS NOT NULL
+        OR r."worksRemotely" = TRUE
+        OR r."distanceKm" <= ${effectiveRadiusKm}
     )
+  `;
+
+  const resultRows = await prisma.$queryRaw(Prisma.sql`
+    ${candidatesCte},
+    ${rankingCtes}
     SELECT
       r.id,
       r."distanceKm",
@@ -279,6 +358,9 @@ export const searchVendors = async ({
     FROM final_ranked r
     ORDER BY
       r."rankGroup" ASC,
+      CASE
+        WHEN r.sponsored THEN md5(r.id || ${rotationKey}::text)
+      END ASC NULLS LAST,
       CASE WHEN r."worksRemotely" THEN 1 ELSE 0 END ASC,
       CASE
         WHEN r."worksRemotely" THEN NULL
@@ -291,13 +373,10 @@ export const searchVendors = async ({
   `);
 
   const countRows = await prisma.$queryRaw(Prisma.sql`
-    ${candidatesCte}
+    ${candidatesCte},
+    ${rankingCtes}
     SELECT COUNT(*)::int AS total
-    FROM candidates c
-    WHERE (
-      c."worksRemotely" = TRUE
-      OR c."distanceKm" <= ${effectiveRadiusKm}
-    )
+    FROM final_ranked
   `);
 
   const total = countRows[0]?.total ?? 0;

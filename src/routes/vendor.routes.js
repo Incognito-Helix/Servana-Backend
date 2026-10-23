@@ -39,6 +39,11 @@ import {
 
 import { signUpload } from "../controllers/upload.controller.js";
 
+import {
+  revealContactController,
+  contactTapController,
+} from "../controllers/contact.controller.js";
+
 const router = express.Router();
 
 // "/profile" must stay above "/:id", or Express would read "profile" as an id.
@@ -112,6 +117,8 @@ router.put(
   validate(workingHoursListSchema),
   saveVendorWorkingHours,
 );
+router.post("/:id/contact", auth, revealContactController);
+router.post("/:id/contact-tap", auth, contactTapController);
 
 router.get("/:id/working-hours", getVendorWorkingHours);
 

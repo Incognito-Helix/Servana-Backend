@@ -19,15 +19,25 @@ const searchQuerySchema = Joi.object({
 
   serviceId: Joi.string().trim().min(1).optional(),
 
-  radiusKm: Joi.number().min(1).max(50).default(10).messages({
-    "number.base": "Search radius must be a number.",
-    "number.min": "Search radius must be at least 1 km.",
-    "number.max": "Search radius cannot exceed 50 km.",
+  radiusKm: Joi.number().min(1).max(50),
+  radius: Joi.number().positive().max(50),
+
+  minPrice: Joi.number().integer().min(0),
+  maxPrice: Joi.number()
+    .integer()
+    .min(0)
+    .when("minPrice", {
+      is: Joi.exist(),
+      then: Joi.number().min(Joi.ref("minPrice")),
+    }),
+
+  minRating: Joi.number().min(1).max(5),
+  homeService: Joi.boolean().messages({
+    "boolean.base": "home service must be true or false",
   }),
-
+  openNow: Joi.boolean(),
+  rotationSeed: Joi.number().integer().min(0).max(2147483647),
   page: Joi.number().integer().min(1).default(1),
-
-  radius: Joi.number().positive().max(50).default(10),
   limit: Joi.number().integer().min(1).max(50).default(10),
 }).unknown(false);
 
