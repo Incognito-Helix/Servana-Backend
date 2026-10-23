@@ -34,7 +34,7 @@ model User {
   // FUTURE (Auth step): authTokens AuthToken[], hashed email OTPs and password reset tokens
   // FUTURE (Auth step): recentLocations UserRecentLocation[], last 3 locations per customer
   // FUTURE (Vendor step): vendorProfile VendorProfile?, one profile per vendor
-  // FUTURE (Reviews step): reviews Review[], written by customers
+  // Customer reviews are defined by the Review relation below.
   // FUTURE (Contact step): contactReveals ContactReveal[]
   // FUTURE (Payments step): payments Payment[]
   // FUTURE (Dashboard step): profileEvents ProfileEvent[], viewerId is nullable for visitors
@@ -45,6 +45,7 @@ model User {
   vendorProfile       VendorProfile?
   contactReveals      ContactReveal[]
   profileEvents       ProfileEvent[]
+  reviews             Review[]             @relation("CustomerReviews")
 
   @@map("users")
 }
@@ -202,6 +203,7 @@ model VendorProfile {
   services          Service[]
   portfolioImages   PortfolioImage[]
   workingHours      WorkingHours[]
+  reviews           Review[]
 
   @@index([latitude, longitude])
   @@index([zoneId])
@@ -365,4 +367,22 @@ model ProfileEvent {
   @@index([boostId])
   @@index([viewerId, type, createdAt])
   @@map("profile_events")
+}
+
+model Review {
+  id         String   @id @default(uuid())
+  profileId  String
+  customerId String
+  rating     Int
+  comment    String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  profile  VendorProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  customer User          @relation("CustomerReviews", fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, customerId])
+  @@index([profileId, createdAt])
+  @@index([profileId, rating])
+  @@map("reviews")
 }
