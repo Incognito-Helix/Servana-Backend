@@ -8,9 +8,11 @@ import "dotenv/config";
 import adminRoutes from "./routes/admin.routes.js";
 import searchRoutes from "./routes/search.routes.js";
 import locationRoutes from "./routes/location.routes.js";
+import { httpLogger } from "./middlewares/logger.js";
 
 const app = express();
 app.set("trust proxy", 1);
+app.use(httpLogger);
 
 app.use(
   cors({
@@ -19,18 +21,6 @@ app.use(
     allowedHeaders: ["Content-Type", "Authorization", "X-CSRF-Token"],
   }),
 );
-
-app.use((req, res, next) => {
-  if (req.path === "/health") return next();
-
-  const start = Date.now();
-  res.on("finish", () => {
-    console.log(
-      `${req.method} ${req.originalUrl.split("?")[0]} ${res.statusCode} ${Date.now() - start}ms`,
-    );
-  });
-  next();
-});
 
 app.use(express.json());
 app.use((req, _res, next) => {
