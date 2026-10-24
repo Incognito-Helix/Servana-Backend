@@ -1,4 +1,3 @@
-import { response } from "express";
 import prisma from "../config/prisma.js";
 export const DAILY_REVEAL_LIMIT = 20;
 const LAGOS_OFFSET_MS = 60 * 60 * 1000;
@@ -161,7 +160,7 @@ export const markFollowupSent = async (customerId, profileId) => {
     select: { id: true },
   });
 
-  if(!reveal) {
+  if (!reveal) {
     throw httpError(
       404,
       "CONTACT_REVEAL_NOT_FOUND",
@@ -194,7 +193,7 @@ export const recordHiredResponse = async (customerId, profileId, response) => {
     select: { id: true },
   });
 
-  if(!reveal) {
+  if (!reveal) {
     throw httpError(
       404,
       "CONTACT_REVEAL_NOT_FOUND",
