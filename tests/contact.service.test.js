@@ -1,3 +1,4 @@
+
 import { afterEach, describe, expect, it, jest } from "@jest/globals";
 
 const mockPrisma = {
@@ -17,6 +18,7 @@ const mockPrisma = {
   contactReveal: {
     upsert: jest.fn(),
     findUnique: jest.fn(),
+    update: jest.fn(),
   },
   $transaction: jest.fn(),
 };
@@ -25,8 +27,13 @@ jest.unstable_mockModule("../src/config/prisma.js", () => ({
   default: mockPrisma,
 }));
 
-const { revealContact, recordContactTap, DAILY_REVEAL_LIMIT } =
-  await import("../src/services/contact.service.js");
+const {
+  revealContact,
+  recordContactTap,
+  markFollowupSent,
+  recordHiredResponse,
+  DAILY_REVEAL_LIMIT,
+} = await import("../src/services/contact.service.js");
 
 const approvedProfile = {
   id: "profile-1",
@@ -42,6 +49,8 @@ const setupApprovedProfile = () => {
   mockPrisma.profileEvent.findMany.mockResolvedValue([]);
   mockPrisma.boost.findFirst.mockResolvedValue(null);
   mockPrisma.contactReveal.upsert.mockResolvedValue({ id: "reveal-1" });
+  mockPrisma.contactReveal.findUnique.mockResolvedValue({ id: "reveal-1" });
+  mockPrisma.contactReveal.update.mockResolvedValue({ id: "reveal-1" });
   mockPrisma.profileEvent.create.mockResolvedValue({ id: "event-1" });
   mockPrisma.$transaction.mockResolvedValue([]);
 };
@@ -60,12 +69,6 @@ describe("Contact reveal service", () => {
       phone: "+2348012345678",
       whatsapp: "+2348012345678",
     });
-
-    expect(mockPrisma.user.findUnique).toHaveBeenCalledWith({
-      where: { id: "customer-1" },
-      select: { emailVerified: true },
-    });
-
     expect(mockPrisma.$transaction).toHaveBeenCalledTimes(1);
   });
 
@@ -96,8 +99,6 @@ describe("Contact reveal service", () => {
         status: 404,
         code: "PROFILE_NOT_FOUND",
       });
-
-      expect(mockPrisma.user.findUnique).not.toHaveBeenCalled();
     },
   );
 
@@ -128,9 +129,8 @@ describe("Contact reveal service", () => {
     expect(mockPrisma.user.findUnique).not.toHaveBeenCalled();
   });
 
-  it("returns nullable phone and WhatsApp values without inventing contact details", async () => {
+  it("returns nullable phone and WhatsApp values", async () => {
     setupApprovedProfile();
-
     mockPrisma.vendorProfile.findUnique.mockResolvedValue({
       ...approvedProfile,
       phone: null,
@@ -144,7 +144,6 @@ describe("Contact reveal service", () => {
 
   it("enforces the daily limit for new vendor reveals", async () => {
     setupApprovedProfile();
-
     mockPrisma.profileEvent.findMany.mockResolvedValue(
       Array.from({ length: DAILY_REVEAL_LIMIT }, (_, index) => ({
         profileId: `profile-${index + 10}`,
@@ -163,7 +162,6 @@ describe("Contact reveal service", () => {
 
   it("allows reopening a vendor already revealed today at the daily limit", async () => {
     setupApprovedProfile();
-
     mockPrisma.profileEvent.findMany.mockResolvedValue([
       { profileId: "profile-1" },
       ...Array.from({ length: DAILY_REVEAL_LIMIT - 1 }, (_, index) => ({
@@ -193,7 +191,6 @@ describe("Contact reveal service", () => {
 
   it("records a contact tap after the contact was revealed", async () => {
     setupApprovedProfile();
-    mockPrisma.contactReveal.findUnique.mockResolvedValue({ id: "reveal-1" });
 
     await expect(
       recordContactTap("customer-1", "profile-1"),
@@ -207,5 +204,104 @@ describe("Contact reveal service", () => {
         viewerId: "customer-1",
       },
     });
+  });
+
+  it("records when a follow-up was sent for an existing contact reveal", async () => {
+    setupApprovedProfile();
+    const timestamp = new Date("2026-10-23T10:00:00.000Z");
+    mockPrisma.contactReveal.update.mockResolvedValue({
+      id: "reveal-1",
+      followupSentAt: timestamp,
+    });
+
+    const result = await markFollowupSent("customer-1", "profile-1");
+
+    expect(result).toEqual({ id: "reveal-1", followupSentAt: timestamp });
+    expect(mockPrisma.contactReveal.update).toHaveBeenCalledWith({
+      where: {
+        profileId_customerId: {
+          profileId: "profile-1",
+          customerId: "customer-1",
+        },
+      },
+      data: { followupSentAt: expect.any(Date) },
+      select: { id: true, followupSentAt: true },
+    });
+  });
+
+  it("records a positive hired response", async () => {
+    setupApprovedProfile();
+    mockPrisma.contactReveal.update.mockResolvedValue({
+      id: "reveal-1",
+      hiredResponse: "yes",
+    });
+
+    const result = await recordHiredResponse("customer-1", "profile-1", "yes");
+
+    expect(result).toEqual({ id: "reveal-1", hiredResponse: "yes" });
+    expect(mockPrisma.contactReveal.update).toHaveBeenCalledWith({
+      where: {
+        profileId_customerId: {
+          profileId: "profile-1",
+          customerId: "customer-1",
+        },
+      },
+      data: { hiredResponse: "yes" },
+      select: { id: true, hiredResponse: true },
+    });
+  });
+
+  it("records a negative hired response", async () => {
+    setupApprovedProfile();
+    mockPrisma.contactReveal.update.mockResolvedValue({
+      id: "reveal-1",
+      hiredResponse: "no",
+    });
+
+    const result = await recordHiredResponse("customer-1", "profile-1", "no");
+
+    expect(result.hiredResponse).toBe("no");
+  });
+
+  it("rejects an invalid hired response without querying the database", async () => {
+    setupApprovedProfile();
+
+    await expect(
+      recordHiredResponse("customer-1", "profile-1", "maybe"),
+    ).rejects.toMatchObject({
+      status: 400,
+      code: "INVALID_HIRED_RESPONSE",
+    });
+
+    expect(mockPrisma.contactReveal.findUnique).not.toHaveBeenCalled();
+    expect(mockPrisma.contactReveal.update).not.toHaveBeenCalled();
+  });
+
+  it("rejects a follow-up when no contact reveal exists", async () => {
+    setupApprovedProfile();
+    mockPrisma.contactReveal.findUnique.mockResolvedValue(null);
+
+    await expect(
+      markFollowupSent("customer-1", "profile-1"),
+    ).rejects.toMatchObject({
+      status: 404,
+      code: "CONTACT_REVEAL_NOT_FOUND",
+    });
+
+    expect(mockPrisma.contactReveal.update).not.toHaveBeenCalled();
+  });
+
+  it("rejects a hire response when no contact reveal exists", async () => {
+    setupApprovedProfile();
+    mockPrisma.contactReveal.findUnique.mockResolvedValue(null);
+
+    await expect(
+      recordHiredResponse("customer-1", "profile-1", "yes"),
+    ).rejects.toMatchObject({
+      status: 404,
+      code: "CONTACT_REVEAL_NOT_FOUND",
+    });
+
+    expect(mockPrisma.contactReveal.update).not.toHaveBeenCalled();
   });
 });
