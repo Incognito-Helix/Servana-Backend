@@ -1,4 +1,3 @@
-
 import "dotenv/config";
 import app from "./src/app.js";
 import { startBoostScheduler } from "./src/services/boost-scheduler.service.js";

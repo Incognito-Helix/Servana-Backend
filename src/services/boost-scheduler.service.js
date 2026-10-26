@@ -8,93 +8,87 @@ const CLAIM_LEASE_MINUTES = 10;
 const DEFAULT_PENDING_TTL_HOURS = 48;
 
 const getPendingTtlHours = () => {
-    const value = Number(process.env.BOOST_PENDING_TTL_HOURS);
+  const value = Number(process.env.BOOST_PENDING_TTL_HOURS);
 
-    return Number.isFinite(value) && value > 0
-     ? value
-     : DEFAULT_PENDING_TTL_HOURS;
+  return Number.isFinite(value) && value > 0
+    ? value
+    : DEFAULT_PENDING_TTL_HOURS;
 };
 
 const formatDate = (date) =>
-    new Intl.DateTimeFormat("en-NG", {
-        dateStyle: "medium",
-        timeStyle: "short",
-        timeZone: "Africa/Lagos",
-    }).format(date);
+  new Intl.DateTimeFormat("en-NG", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "Africa/Lagos",
+  }).format(date);
 
 export const expireBoosts = async (now = new Date()) => {
-    const result = await prisma.boost.updateMany({
-        where: {
-            status: "active",
-            endAt: { lte:now },
-        },
-        data: { status: "expired" },
-    });
+  const result = await prisma.boost.updateMany({
+    where: {
+      status: "active",
+      endAt: { lte: now },
+    },
+    data: { status: "expired" },
+  });
 
-    return result.count;
+  return result.count;
 };
 
-export const cancelStalePendingBoosts = async (now= new Date()) => {
-    const cutoff = new Date(
-        now.getTime() - getPendingTtlHours() * HOUR_MS,
-    );
+export const cancelStalePendingBoosts = async (now = new Date()) => {
+  const cutoff = new Date(now.getTime() - getPendingTtlHours() * HOUR_MS);
 
-const result = await prisma.boost.updateMany({
+  const result = await prisma.boost.updateMany({
     where: {
-        status: "pending",
-        createdAt: { lte: cutoff },
+      status: "pending",
+      createdAt: { lte: cutoff },
     },
     data: { status: "cancelled" },
-});
+  });
 
-return result.count;
+  return result.count;
 };
 
 export const sendBoostExpiryReminders = async (now = new Date()) => {
-   const windowEnd = new Date(
-    now.getTime() + REMINDER_WINDOW_HOURS * HOUR_MS,
-   );
-   const claimCutoff = new Date(
-    now.getTime() - CLAIM_LEASE_MINUTES * 60 * 1000,
-   );
+  const windowEnd = new Date(now.getTime() + REMINDER_WINDOW_HOURS * HOUR_MS);
+  const claimCutoff = new Date(now.getTime() - CLAIM_LEASE_MINUTES * 60 * 1000);
 
-   const candidates = await prisma.boost.findMany({
+  const candidates = await prisma.boost.findMany({
     where: {
-        status: "active",
-        endAt: { gt:now, lte: windowEnd },
-        reminderSentAt: null,
-        OR: [
-            { reminderClaimedAt: null },
-            { reminderClaimedAt: { lt: claimCutoff } },
-        ],
+      status: "active",
+      endAt: { gt: now, lte: windowEnd },
+      reminderSentAt: null,
+      OR: [
+        { reminderClaimedAt: null },
+        { reminderClaimedAt: { lt: claimCutoff } },
+      ],
     },
     include: {
       profile: {
         include: {
-            user: {
-                select:{
-                    email: true,
-                    firstName: true,
-                    lastName: true,
-                },
+          user: {
+            select: {
+              email: true,
+              firstName: true,
+              lastName: true,
             },
+          },
         },
       },
     },
-   });
-   let sent = 0;
-   let failed = 0;
-   let skipped = 0;
+  });
+  let sent = 0;
+  let failed = 0;
+  let skipped = 0;
 
-   for (const boost of candidates) {
+  for (const boost of candidates) {
     //Automatically claim this reminder so concurrent runs do not send both.
     const claim = await prisma.boost.updateMany({
-        where: {
-            id: boost.id,
-            status: "active",
-            reminderSentAt: null,
-            OR: [
-                 { reminderClaimedAt: null },
+      where: {
+        id: boost.id,
+        status: "active",
+        reminderSentAt: null,
+        OR: [
+          { reminderClaimedAt: null },
           { reminderClaimedAt: { lt: claimCutoff } },
         ],
       },
@@ -219,4 +213,3 @@ export const startBoostScheduler = () => {
   console.info("[boost-scheduler] Started");
   return task;
 };
-

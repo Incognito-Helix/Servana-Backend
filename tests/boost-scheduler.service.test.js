@@ -1,51 +1,46 @@
-import { beforeEach, describe, expect, jest, test} from "@jest/globals";
+import { beforeEach, describe, expect, jest, test } from "@jest/globals";
 
 const mockUpdateMany = jest.fn();
 const mockFindMany = jest.fn();
 const mockSendEmail = jest.fn();
 
 jest.unstable_mockModule("../src/config/prisma.js", () => ({
-    default: {
-        boost: {
-            updateMany: mockUpdateMany,
-            findMany: mockFindMany,
-        },
- },
+  default: {
+    boost: {
+      updateMany: mockUpdateMany,
+      findMany: mockFindMany,
+    },
+  },
 }));
 
 jest.unstable_mockModule("../src/services/email.service.js", () => ({
-    sendEmail: mockSendEmail,
+  sendEmail: mockSendEmail,
 }));
 
-
-const {
-  expireBoosts,
-  cancelStalePendingBoosts,
-  sendBoostExpiryReminders,
-} = await import("../src/services/boost-scheduler.service.js");
+const { expireBoosts, cancelStalePendingBoosts, sendBoostExpiryReminders } =
+  await import("../src/services/boost-scheduler.service.js");
 
 describe("boost scheduler service", () => {
-     beforeEach(() => {
-        jest.clearAllMocks();
-        delete process.env.BOOST_PENDING_TTL_HOURS;
-     });
+  beforeEach(() => {
+    jest.clearAllMocks();
+    delete process.env.BOOST_PENDING_TTL_HOURS;
+  });
 
-    test("expires active boosts whose end time has passed", async () => {
-        mockUpdateMany.mockResolvedValue({ count: 2});
+  test("expires active boosts whose end time has passed", async () => {
+    mockUpdateMany.mockResolvedValue({ count: 2 });
 
-        const now = new Date("2026-10-26T12:00:00.000Z");
-        const result = await expireBoosts(now);
+    const now = new Date("2026-10-26T12:00:00.000Z");
+    const result = await expireBoosts(now);
 
-        expect(result).toBe(2);
-        expect(mockUpdateMany).toHaveBeenCalledWith({
-            where: {
-                status:"active",
-                endAt: { lte: now },
-            },
-            data: { status: "expired" },
-        });
+    expect(result).toBe(2);
+    expect(mockUpdateMany).toHaveBeenCalledWith({
+      where: {
+        status: "active",
+        endAt: { lte: now },
+      },
+      data: { status: "expired" },
     });
-
+  });
 
   test("cancels pending boosts older than the configured threshold", async () => {
     process.env.BOOST_PENDING_TTL_HOURS = "24";
@@ -179,7 +174,7 @@ describe("boost scheduler service", () => {
     });
   });
 
-    test("releases the claim when the vendor has no email address", async () => {
+  test("releases the claim when the vendor has no email address", async () => {
     const now = new Date("2026-10-26T12:00:00.000Z");
 
     mockFindMany.mockResolvedValue([
@@ -216,36 +211,36 @@ describe("boost scheduler service", () => {
   });
 
   test("releases the claim when email delivery throws", async () => {
-  const now = new Date("2026-10-26T12:00:00.000Z");
+    const now = new Date("2026-10-26T12:00:00.000Z");
 
-  mockFindMany.mockResolvedValue([
-    {
-      id: "boost-email-error",
-      type: "daily",
-      endAt: new Date("2026-10-27T08:00:00.000Z"),
-      profile: {
-        user: {
-          email: "vendor@example.com",
-          firstName: "Ada",
-          lastName: "Okafor",
+    mockFindMany.mockResolvedValue([
+      {
+        id: "boost-email-error",
+        type: "daily",
+        endAt: new Date("2026-10-27T08:00:00.000Z"),
+        profile: {
+          user: {
+            email: "vendor@example.com",
+            firstName: "Ada",
+            lastName: "Okafor",
+          },
         },
       },
-    },
-  ]);
+    ]);
 
-  mockUpdateMany
-    .mockResolvedValueOnce({ count: 1 }) // Claim
-    .mockResolvedValueOnce({ count: 1 }); // Release claim
+    mockUpdateMany
+      .mockResolvedValueOnce({ count: 1 }) // Claim
+      .mockResolvedValueOnce({ count: 1 }); // Release claim
 
-  mockSendEmail.mockRejectedValue(new Error("Email provider unavailable"));
+    mockSendEmail.mockRejectedValue(new Error("Email provider unavailable"));
 
-  const result = await sendBoostExpiryReminders(now);
+    const result = await sendBoostExpiryReminders(now);
 
-  expect(result.failed).toBe(1);
-  expect(result.sent).toBe(0);
-  expect(mockUpdateMany).toHaveBeenCalledTimes(2);
-  expect(mockUpdateMany.mock.calls[1][0].data).toEqual({
-    reminderClaimedAt: null,
+    expect(result.failed).toBe(1);
+    expect(result.sent).toBe(0);
+    expect(mockUpdateMany).toHaveBeenCalledTimes(2);
+    expect(mockUpdateMany.mock.calls[1][0].data).toEqual({
+      reminderClaimedAt: null,
+    });
   });
-});
 });
