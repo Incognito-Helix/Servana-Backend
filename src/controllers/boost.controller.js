@@ -1,4 +1,34 @@
-import { createBoost, cancelBoost } from "../services/boost.service.js";
+import prisma from "../config/prisma.js";
+import {
+  createBoost,
+  cancelBoost,
+  quoteBoost,
+} from "../services/boost.service.js";
+
+export const quoteBoostController = async (req, res, next) => {
+  try {
+    const profile = await prisma.vendorProfile.findUnique({
+      where: { userId: req.user.id },
+      select: { id: true },
+    });
+
+    if (!profile) {
+      const error = new Error("Vendor profile not found.");
+      error.status = 404;
+      error.code = "PROFILE_NOT_FOUND";
+      return next(error);
+    }
+    const quote = await quoteBoost(req.body);
+
+    return res.status(200).json({
+      success: true,
+      message: "Boost quote generated successfully.",
+      data: { quote },
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
 
 export const createBoostController = async (req, res, next) => {
   try {
