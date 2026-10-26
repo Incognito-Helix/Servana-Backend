@@ -65,7 +65,7 @@ router.post(
   auth,
   requireRole("vendor"),
   validate(quoteBoostSchema),
-  quoteBoostController
+  quoteBoostController,
 );
 
 // "/profile" must stay above "/:id", or Express would read "profile" as an id.

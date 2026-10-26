@@ -1,4 +1,3 @@
-
 import prisma from "../config/prisma.js";
 
 const durationDays = { daily: 1, weekly: 7, monthly: 30 };
@@ -21,11 +20,7 @@ const httpError = (status, code, message, fieldErrors = {}) => {
 const validationError = (fieldErrors) =>
   httpError(400, "VALIDATION_ERROR", "Validation Error", fieldErrors);
 
-const validateBoostRequest = async ({
-  profileId,
-  categoryId,
-  zoneIds,
-}) => {
+const validateBoostRequest = async ({ profileId, categoryId, zoneIds }) => {
   const profile = await prisma.vendorProfile.findUnique({
     where: { id: profileId },
     select: { id: true, status: true },

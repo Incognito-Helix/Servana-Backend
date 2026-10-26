@@ -1,5 +1,9 @@
 import prisma from "../config/prisma.js";
-import { createBoost, cancelBoost, quoteBoost } from "../services/boost.service.js";
+import {
+  createBoost,
+  cancelBoost,
+  quoteBoost,
+} from "../services/boost.service.js";
 
 export const quoteBoostController = async (req, res, next) => {
   try {
@@ -21,7 +25,7 @@ export const quoteBoostController = async (req, res, next) => {
       message: "Boost quote generated successfully.",
       data: { quote },
     });
-  }catch(error) {
+  } catch (error) {
     return next(error);
   }
 };
