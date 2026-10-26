@@ -1,7 +1,6 @@
 import Joi from "joi";
 
-export const createBoostSchema = Joi.object({
-  profileId: Joi.string().uuid().required(),
+const boostFields = {
   categoryId: Joi.string().uuid().required(),
   type: Joi.string().valid("top_spot", "zone_boost").required(),
   durationType: Joi.string().valid("daily", "weekly", "monthly").required(),
@@ -11,4 +10,11 @@ export const createBoostSchema = Joi.object({
     .max(10)
     .unique()
     .required(),
-}).optional({ abortEarly: false, stripUnknown: true });
+};
+
+export const createBoostSchema = Joi.object({
+  profileId: Joi.string().uuid().required(),
+  ...boostFields,
+});
+
+export const quoteBoostSchema = Joi.object(boostFields);
