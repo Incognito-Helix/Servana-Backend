@@ -17,6 +17,36 @@ const httpError = (status, code, message, fieldErrors = {}) => {
   return error;
 };
 
+const renew_window_ms = 24 * 60 * 60 * 100;
+const resolveStartAt = async (profileId, zoneIds, now = new Date()) => {
+  const current = await prisma.boost.findMany({
+    where: {
+      profileId,
+      status: "active",
+      endAt: { gte: now },
+      zones: { some: { zoneId: { in: zoneIds } } },
+    },
+    select: { endAt: true },
+  });
+
+  const tooEarly = current.some(
+    (boost) => boost.endAt.getTime() - now.getTime() > renew_window_ms,
+  );
+
+  if (tooEarly)
+    throw httpError(
+      409,
+      "BOOST_OVERLAP",
+      "You already have a boost running in one of these zones. You can renew it when it has less than 24 hours left.",
+    );
+
+  return (
+    current.reduce((latest, boost) =>
+      boost.endAt > latest ? boost.endAt : latest,
+    ),
+    now
+  );
+};
 const validationError = (fieldErrors) =>
   httpError(400, "VALIDATION_ERROR", "Validation Error", fieldErrors);
 
@@ -147,7 +177,7 @@ export const createBoost = async ({
     });
   }
 
-  const startAt = new Date();
+  const startAt = resolveStartAt(profileId, zoneIds);
   const endAt = new Date(
     startAt.getTime() + durationDays[durationType] * dayMs,
   );
@@ -195,4 +225,94 @@ export const cancelBoost = async (boostId) => {
   });
 
   return toBoost(boost);
+};
+
+export const createPendingBoost = async ({
+  profileId,
+  categoryId,
+  type,
+  durationType,
+  zoneIds,
+}) => {
+  await validateBoostRequest({ profileId, categoryId, zoneIds });
+
+  if (!durationDays[durationType] || !BOOST_BASE_PRICES_KOBO[type])
+    throw validationError({
+      durationType: "Unsupported boost type or duration.",
+    });
+
+  await resolveStartAt(profileId, zoneIds);
+  const startAt = new Date();
+  const endAt = new Date(
+    startAt.getTime() + durationDays[durationType] * dayMs,
+  );
+
+  const boost = prisma.boost.create({
+    data: {
+      profileId,
+      categoryId,
+      type,
+      status: "pending",
+      startAt,
+      endAt,
+      zones: { create: zoneIds.map((zoneId) => ({ zoneId })) },
+    },
+    include: { zones: { select: { zoneId: true } } },
+  });
+
+  return toBoost(boost);
+};
+
+export const activateBoost = async (boostId, now = new Date()) => {
+  const boost = await prisma.boost.findUnique({
+    where: { id: boostId },
+    include: { zones: { select: { zoneId: true } } },
+  });
+
+  if (!boost) {
+    throw httpError(404, "BOOST_NOT_FOUND", "Boost not found.");
+  }
+
+  if (boost.status === "active") return toBoost(boost);
+
+  if (boost.status !== "pending") {
+    throw httpError(
+      409,
+      "INVALID_BOOST_STATUS",
+      "Only pending boosts can be activated.",
+    );
+  }
+
+  const durationMs = boost.endAt.getTime() - boost.startAt.getTime();
+  const zoneIds = boost.zones.map((item) => item.zoneId);
+
+  const current = await prisma.boost.findMany({
+    where: {
+      id: { not: boost.id },
+      profileId: boost.profileId,
+      status: "active",
+      endAt: { gt: now },
+      zones: { some: { zoneId: { in: zoneIds } } },
+    },
+    select: { endAt: true },
+  });
+
+  const startAt = current.reduce(
+    (latest, item) => (item.endAt > latest ? item.endAt : latest),
+    now,
+  );
+  const endAt = new Date(startAt.getTime() + durationMs);
+
+  // Only flips a boost that is still pending, so two webhooks cannot both win.
+  await prisma.boost.updateMany({
+    where: { id: boost.id, status: "pending" },
+    data: { status: "active", startAt, endAt },
+  });
+
+  const updated = await prisma.boost.findUnique({
+    where: { id: boost.id },
+    include: { zones: { select: { zoneId: true } } },
+  });
+
+  return toBoost(updated);
 };

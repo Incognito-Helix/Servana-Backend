@@ -14,6 +14,8 @@ import { createBoostSchema } from "../validators/boost.validator.js";
 import {
   createBoostController,
   cancelBoostController,
+  createPendingBoostController,
+  activateBoostController,
 } from "../controllers/boost.controller.js";
 
 const router = express.Router();
@@ -53,7 +55,21 @@ router.patch(
   requireRole("admin"),
   cancelBoostController,
 );
+// Stand ins for checkout and the Paystack webhook, for testing and the demo.
+router.post(
+  "/boosts/pending",
+  auth,
+  requireRole("admin"),
+  validate(createBoostSchema),
+  createPendingBoostController,
+);
 
+router.patch(
+  "/boosts/:boostId/activate",
+  auth,
+  requireRole("admin"),
+  activateBoostController,
+);
 // Get pending review reports
 router.get(
   "/reviews/reports",

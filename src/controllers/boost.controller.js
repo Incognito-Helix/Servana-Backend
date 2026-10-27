@@ -3,6 +3,8 @@ import {
   createBoost,
   cancelBoost,
   quoteBoost,
+  createPendingBoost,
+  activateBoost,
 } from "../services/boost.service.js";
 
 export const quoteBoostController = async (req, res, next) => {
@@ -51,6 +53,32 @@ export const cancelBoostController = async (req, res, next) => {
     return res.status(200).json({
       success: true,
       message: "Boost cancelled successfully.",
+      data: { boost },
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const createPendingBoostController = async (req, res, next) => {
+  try {
+    const boost = await createPendingBoost(req.body);
+    return res.status(201).json({
+      success: true,
+      message: "Pending boost created.",
+      data: { boost },
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const activateBoostController = async (req, res, next) => {
+  try {
+    const boost = await activateBoost(req.params.boostId);
+    return res.status(200).json({
+      success: true,
+      message: "Boost activated.",
       data: { boost },
     });
   } catch (error) {
