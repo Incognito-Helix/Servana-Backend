@@ -260,7 +260,7 @@ export const createPendingBoost = async ({
     include: { zones: { select: { zoneId: true } } },
   });
 
-  return toBoost(boost)
+  return toBoost(boost);
 };
 
 export const activateBoost = async (boostId, now = new Date()) => {

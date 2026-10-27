@@ -5,7 +5,6 @@ import {
   getPendingVendorReviewsController,
   approveVendorProfileController,
   rejectVendorProfileController,
-
 } from "../controllers/admin.controller.js";
 import validate from "../middlewares/validate.js";
 import { createBoostSchema } from "../validators/boost.validator.js";
