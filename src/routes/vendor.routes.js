@@ -13,6 +13,7 @@ import {
   workingHoursListSchema,
   // verifyNinSchema,
   signUploadSchema,
+  confirmUploadSchema,
 } from "../validators/vendor.validator.js";
 import {
   createVendorProfile,
@@ -37,7 +38,11 @@ import {
   getVendorOpenNow,
 } from "../controllers/working-hours.controller.js";
 
-import { signUpload } from "../controllers/upload.controller.js";
+import {
+  signUpload,
+  confirmUpload,
+  deletePortfolioImage,
+} from "../controllers/upload.controller.js";
 
 import {
   revealContactController,
@@ -167,6 +172,23 @@ router.post(
   requireOwnership((req) => getProfileOwnerId(req.params.id)),
   validate(signUploadSchema),
   signUpload,
+);
+
+router.post(
+  "/:id/uploads/confirm",
+  auth,
+  requireRole("vendor"),
+  requireOwnership((req) => getProfileOwnerId(req.params.id)),
+  validate(confirmUploadSchema),
+  confirmUpload,
+);
+
+router.delete(
+  "/:id/portfolio/:imageId",
+  auth,
+  requireRole("vendor"),
+  requireOwnership((req) => getProfileOwnerId(req.params.id)),
+  deletePortfolioImage,
 );
 
 export default router;

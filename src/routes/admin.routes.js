@@ -5,6 +5,9 @@ import {
   getPendingVendorReviewsController,
   approveVendorProfileController,
   rejectVendorProfileController,
+  getReviewReportsController,
+  hideReviewController,
+  dismissReviewReportController,
 } from "../controllers/admin.controller.js";
 import validate from "../middlewares/validate.js";
 import { createBoostSchema } from "../validators/boost.validator.js";
@@ -66,5 +69,27 @@ router.patch(
   auth,
   requireRole("admin"),
   activateBoostController,
+// Get pending review reports
+router.get(
+  "/reviews/reports",
+  auth,
+  requireRole("admin"),
+  getReviewReportsController,
+);
+
+// Hide a reported review
+router.patch(
+  "/reviews/:id/hide",
+  auth,
+  requireRole("admin"),
+  hideReviewController,
+);
+
+// Dismiss a review report
+router.patch(
+  "/reviews/reports/:id/dismiss",
+  auth,
+  requireRole("admin"),
+  dismissReviewReportController,
 );
 export default router;
