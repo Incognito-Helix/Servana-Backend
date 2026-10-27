@@ -26,7 +26,7 @@ const resolveStartAt = async (profileId, zoneIds, now = new Date()) => {
       endAt: { gte: now },
       zones: { some: { zoneId: { in: zoneIds } } },
     },
-    select: { endAt },
+    select: { endAt: true },
   });
 
   const tooEarly = current.some(
