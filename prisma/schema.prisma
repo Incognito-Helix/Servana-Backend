@@ -299,6 +299,8 @@ model Boost {
   status     BoostStatus @default(pending)
   startAt    DateTime
   endAt      DateTime
+  reminderSentAt  DateTime?
+  reminderClaimedAt  DateTime?
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
 

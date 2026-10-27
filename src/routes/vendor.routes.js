@@ -60,7 +60,18 @@ import {
 } from "../validators/review.validator.js";
 import validateQuery from "../middlewares/validateQuery.js";
 
+import { quoteBoostController } from "../controllers/boost.controller.js";
+
+import { quoteBoostSchema } from "../validators/boost.validator.js";
 const router = express.Router();
+
+router.post(
+  "/boosts/quote",
+  auth,
+  requireRole("vendor"),
+  validate(quoteBoostSchema),
+  quoteBoostController,
+);
 
 // "/profile" must stay above "/:id", or Express would read "profile" as an id.
 router.post(
