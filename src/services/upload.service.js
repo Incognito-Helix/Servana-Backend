@@ -1,11 +1,11 @@
-import { v2 as cloudinary } from "cloudinary";
+import cloudinary from "../config/cloudinary.js";
 import prisma from "../config/prisma.js";
 
 const max_portfolio_image = 10;
 const max_image_bytes = 5 * 1024 * 1024;
 const allowed_formats = "jpg,png,webp";
-const upload_kind = new set(["cover", "profile", "portfolio"]);
-const image_formats = new set(["jpg", "jpeg", "png", "webp"]);
+const upload_kind = new Set(["cover", "profile", "portfolio"]);
+const image_formats = new Set(["jpg", "jpeg", "png", "webp"]);
 
 const httpError = (status, code, message) => {
   const error = new Error(message);
@@ -48,7 +48,7 @@ const configuration = () => {
       "photo uploads are temporarily unavailable",
     );
 
-  return { cloudName, apiKey, apiKey };
+  return { cloudName, apiKey, apiSecret };
 };
 
 const validateKind = (kind) => {
@@ -149,7 +149,9 @@ const verifiedAssetUrl = async (profileId, kind, publicId) => {
   let url;
   try {
     url = new URL(asset?.secure_url);
-  } catch {}
+  } catch {
+    // Not a valid URL. url stays null and the check below rejects it.
+  }
   if (
     asset?.public_id !== publicId ||
     asset.resource_type !== "image" ||

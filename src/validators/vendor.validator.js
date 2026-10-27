@@ -298,4 +298,18 @@ export const signUploadSchema = Joi.object({
       "any.only": "kind must be cover, profile or portfolio",
       "any.required": "kind is required",
     }),
-}).optional(options);
+}).options(options);
+
+export const confirmUploadSchema = Joi.object({
+  kind: Joi.string()
+    .valid("cover", "profile", "portfolio")
+    .required()
+    .messages({
+      "any.only": "kind must be cover, profile or portfolio",
+      "any.required": "kind is required",
+    }),
+  publicId: Joi.string().trim().max(300).required().messages({
+    "string.empty": "publicId is required",
+    "any.required": "publicId is required",
+  }),
+}).options(options);
