@@ -69,6 +69,7 @@ router.patch(
   auth,
   requireRole("admin"),
   activateBoostController,
+);
 // Get pending review reports
 router.get(
   "/reviews/reports",
