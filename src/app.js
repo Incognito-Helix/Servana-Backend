@@ -10,6 +10,7 @@ import searchRoutes from "./routes/search.routes.js";
 import locationRoutes from "./routes/location.routes.js";
 import { httpLogger } from "./middlewares/logger.js";
 import uploadRoutes from "./routes/uploads.js";
+import reviewRoutes from "./routes/review.routes.js";
 
 const app = express();
 app.set("trust proxy", 1);
@@ -46,6 +47,7 @@ app.use("/admin", adminRoutes);
 
 app.use("/search", searchRoutes);
 app.use("/locations", locationRoutes);
+app.use("/reviews", reviewRoutes);
 
 app.use(errorHandler);
 

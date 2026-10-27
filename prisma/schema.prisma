@@ -46,6 +46,8 @@ model User {
   contactReveals      ContactReveal[]
   profileEvents       ProfileEvent[]
   reviews             Review[]             @relation("CustomerReviews")
+  reviewReports       ReviewReport[]       @relation("SubmittedReviewReports")
+  auditLogs           AuditLog[]           @relation("AdminAuditLogs")
 
   @@map("users")
 }
@@ -372,19 +374,79 @@ model ProfileEvent {
 }
 
 model Review {
-  id         String   @id @default(uuid())
-  profileId  String
-  customerId String
-  rating     Int
-  comment    String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id               String                 @id @default(uuid())
+  profileId        String
+  customerId       String
+  rating           Int
+  comment          String?
+  moderationStatus ReviewModerationStatus @default(visible)
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
 
   profile  VendorProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
   customer User          @relation("CustomerReviews", fields: [customerId], references: [id], onDelete: Cascade)
 
+  reply   ReviewReply?
+  reports ReviewReport[]
+
   @@unique([profileId, customerId])
   @@index([profileId, createdAt])
   @@index([profileId, rating])
+  @@index([moderationStatus])
   @@map("reviews")
+}
+
+model ReviewReply {
+  id        String   @id @default(uuid())
+  reviewId  String   @unique
+  message   String   @db.VarChar(500)
+  createdAt DateTime @default(now())
+
+  review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@map("review_replies")
+}
+
+enum ReviewModerationStatus {
+  visible
+  hidden
+}
+
+model ReviewReport {
+  id         String             @id @default(uuid())
+  reviewId   String
+  reporterId String
+  reason     String             @db.VarChar(500)
+  createdAt  DateTime           @default(now())
+  status     ReviewReportStatus @default(pending)
+  reviewedAt DateTime?
+
+  review   Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  reporter User   @relation("SubmittedReviewReports", fields: [reporterId], references: [id], onDelete: Cascade)
+
+  @@unique([reviewId, reporterId])
+  @@index([reviewId])
+  @@map("review_reports")
+}
+
+enum ReviewReportStatus {
+  pending
+  resolved
+  dismissed
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String
+  action     String
+  entityType String
+  entityId   String
+  details    Json?
+  createdAt  DateTime @default(now())
+
+  actor User @relation("AdminAuditLogs", fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([entityType, entityId])
+  @@index([actorId, createdAt])
+  @@map("audit_logs")
 }
