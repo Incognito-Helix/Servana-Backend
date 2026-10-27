@@ -25,6 +25,9 @@ jobs:
       - name: Generate Prisma Client
         run: npx prisma generate
 
+      - name: Logging redaction test
+        run: npm test -- tests/logging-nin.test.js
+
       - name: Lint
         run: npm run lint
 
