@@ -151,3 +151,61 @@ export const recordContactTap = async (userId, profileId) => {
     },
   });
 };
+
+export const markFollowupSent = async (customerId, profileId) => {
+  const reveal = await prisma.contactReveal.findUnique({
+    where: {
+      profileId_customerId: { profileId, customerId },
+    },
+    select: { id: true },
+  });
+
+  if (!reveal) {
+    throw httpError(
+      404,
+      "CONTACT_REVEAL_NOT_FOUND",
+      "No contact reveal exists for this customer and vendor.",
+    );
+  }
+
+  return prisma.contactReveal.update({
+    where: {
+      profileId_customerId: { profileId, customerId },
+    },
+    data: { followupSentAt: new Date() },
+    select: { id: true, followupSentAt: true },
+  });
+};
+
+export const recordHiredResponse = async (customerId, profileId, response) => {
+  if (!["yes", "no"].includes(response)) {
+    throw httpError(
+      400,
+      "INVALID_HIRED_RESPONSE",
+      'Hired response must be either "yes" or "no".',
+    );
+  }
+
+  const reveal = await prisma.contactReveal.findUnique({
+    where: {
+      profileId_customerId: { profileId, customerId },
+    },
+    select: { id: true },
+  });
+
+  if (!reveal) {
+    throw httpError(
+      404,
+      "CONTACT_REVEAL_NOT_FOUND",
+      "No contact reveal exists for this customer and vendor.",
+    );
+  }
+
+  return prisma.contactReveal.update({
+    where: {
+      profileId_customerId: { profileId, customerId },
+    },
+    data: { hiredResponse: response },
+    select: { id: true, hiredResponse: true },
+  });
+};
