@@ -47,6 +47,7 @@ import {
 import {
   revealContactController,
   contactTapController,
+  hiredResponseController,
 } from "../controllers/contact.controller.js";
 
 import {
@@ -160,6 +161,13 @@ router.put(
 );
 router.post("/:id/contact", auth, revealContactController);
 router.post("/:id/contact-tap", auth, contactTapController);
+
+router.patch(
+  "/:id/hired-response",
+  auth,
+  requireRole("customer"),
+  hiredResponseController,
+);
 
 router.get("/:id/working-hours", getVendorWorkingHours);
 
