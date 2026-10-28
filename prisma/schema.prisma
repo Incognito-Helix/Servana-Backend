@@ -48,6 +48,7 @@ model User {
   reviews             Review[]             @relation("CustomerReviews")
   reviewReports       ReviewReport[]       @relation("SubmittedReviewReports")
   auditLogs           AuditLog[]           @relation("AdminAuditLogs")
+  payments            Payment[]
 
   @@map("users")
 }
@@ -292,27 +293,54 @@ model WorkingHours {
 }
 
 model Boost {
-  id         String      @id @default(uuid())
-  profileId  String
-  categoryId String
-  type       BoostType
-  status     BoostStatus @default(pending)
-  startAt    DateTime
-  endAt      DateTime
-  reminderSentAt  DateTime?
-  reminderClaimedAt  DateTime?
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
+  id                String      @id @default(uuid())
+  profileId         String
+  categoryId        String
+  type              BoostType
+  status            BoostStatus @default(pending)
+  startAt           DateTime
+  endAt             DateTime
+  reminderSentAt    DateTime?
+  reminderClaimedAt DateTime?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
 
   profile       VendorProfile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
   category      Category       @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   zones         BoostZone[]
   profileEvents ProfileEvent[]
+  payments      Payment[]
 
   @@index([status, type, startAt, endAt])
   @@index([profileId, status])
   @@index([categoryId, status])
   @@map("boosts")
+}
+
+enum PaymentStatus {
+  pending
+  success
+  failed
+}
+
+model Payment {
+  id                String        @id @default(uuid())
+  userId            String
+  boostId           String
+  paystackReference String        @unique
+  amountKobo        Int
+  currency          String        @default("NGN")
+  status            PaymentStatus @default(pending)
+  paidAt            DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Restrict)
+  boost Boost @relation(fields: [boostId], references: [id], onDelete: Restrict)
+
+  @@index([userId, status])
+  @@index([boostId, status])
+  @@map("payments")
 }
 
 model BoostZone {

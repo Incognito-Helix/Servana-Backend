@@ -11,6 +11,7 @@ import locationRoutes from "./routes/location.routes.js";
 import { httpLogger } from "./middlewares/logger.js";
 import uploadRoutes from "./routes/uploads.js";
 import reviewRoutes from "./routes/review.routes.js";
+import paystackWebhookRoutes from "./routes/paystack-webhook.routes.js";
 
 const app = express();
 app.set("trust proxy", 1);
@@ -24,7 +25,15 @@ app.use(
   }),
 );
 
+// Paystack needs the original raw request body for signature verification.
+app.use(
+  "/webhooks/paystack",
+  express.raw({ type: "application/json" }),
+  paystackWebhookRoutes,
+);
+
 app.use(express.json());
+
 app.use("/api/uploads", uploadRoutes);
 app.use((req, _res, next) => {
   req.body = req.body ?? {};

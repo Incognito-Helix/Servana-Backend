@@ -7,6 +7,7 @@ const mockPrisma = {
   zone: { findMany: jest.fn() },
   boost: {
     create: jest.fn(),
+    findMany: jest.fn(),
     findUnique: jest.fn(),
     update: jest.fn(),
   },
@@ -30,6 +31,7 @@ describe("Boost service", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+   mockPrisma.boost.findMany.mockResolvedValue([]);
 
     mockPrisma.vendorProfile.findUnique.mockResolvedValue({
       id: "profile-1",
