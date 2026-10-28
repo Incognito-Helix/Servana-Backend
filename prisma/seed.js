@@ -174,6 +174,17 @@ const main = async () => {
   }
 
   const email = ADMIN_EMAIL.toLowerCase();
+  if (process.env.SEED_TARGET === "production") {
+    const weak =
+      ADMIN_PASSWORD.length < 12 ||
+      ADMIN_PASSWORD === "change_me_edosa" ||
+      email === "admin@example.com";
+    if (weak) {
+      throw new Error(
+        "Refusing to seed production: ADMIN_EMAIL must be a real address and ADMIN_PASSWORD must be 12+ characters and not the .env.example placeholder",
+      );
+    }
+  }
   const passwordHash = await bcrypt.hash(ADMIN_PASSWORD, 12);
 
   await prisma.user.upsert({

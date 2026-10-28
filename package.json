@@ -13,7 +13,8 @@
     "seed": "node prisma/seed.js",
     "lint": "eslint .",
     "format:check": "prettier --check src prisma tests server.js",
-    "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest"
+    "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest",
+    "seed:verify": "node scripts/verify-prod-seed.js"
   },
   "keywords": [],
   "author": "",
