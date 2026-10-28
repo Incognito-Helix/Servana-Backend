@@ -1,4 +1,3 @@
-
 import {
   verifyPaystackSignature,
   processPaystackEvent,
@@ -8,10 +7,7 @@ export const paystackWebhookController = async (req, res, next) => {
   try {
     const signature = req.get("x-paystack-signature");
 
-    const isValid = verifyPaystackSignature(
-      req.body,
-      signature,
-    );
+    const isValid = verifyPaystackSignature(req.body, signature);
 
     if (!isValid) {
       return res.status(401).json({

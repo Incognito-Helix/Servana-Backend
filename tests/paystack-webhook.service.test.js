@@ -1,4 +1,3 @@
-
 import { jest, describe, test, expect, beforeEach } from "@jest/globals";
 import { createHmac } from "node:crypto";
 
@@ -23,10 +22,8 @@ jest.unstable_mockModule("../src/config/prisma.js", () => ({
   default: mockPrisma,
 }));
 
-const {
-  verifyPaystackSignature,
-  processPaystackEvent,
-} = await import("../src/services/paystack-webhook.service.js");
+const { verifyPaystackSignature, processPaystackEvent } =
+  await import("../src/services/paystack-webhook.service.js");
 
 const rawBody = Buffer.from(
   JSON.stringify({
@@ -94,15 +91,11 @@ describe("Paystack webhook service", () => {
     test("accepts a valid Paystack signature", () => {
       const signature = signPayload(rawBody);
 
-      expect(
-        verifyPaystackSignature(rawBody, signature),
-      ).toBe(true);
+      expect(verifyPaystackSignature(rawBody, signature)).toBe(true);
     });
 
     test("rejects an invalid signature", () => {
-      expect(
-        verifyPaystackSignature(rawBody, "a".repeat(128)),
-      ).toBe(false);
+      expect(verifyPaystackSignature(rawBody, "a".repeat(128))).toBe(false);
     });
 
     test("rejects a missing signature", () => {
@@ -112,9 +105,7 @@ describe("Paystack webhook service", () => {
     test("rejects a signature calculated from a different secret", () => {
       const signature = signPayload(rawBody, "wrong-secret");
 
-      expect(
-        verifyPaystackSignature(rawBody, signature),
-      ).toBe(false);
+      expect(verifyPaystackSignature(rawBody, signature)).toBe(false);
     });
 
     test("rejects a non-Buffer request body", () => {
@@ -215,33 +206,30 @@ describe("Paystack webhook service", () => {
       expect(mockTx.payment.updateMany).not.toHaveBeenCalled();
       expect(mockTx.boost.updateMany).not.toHaveBeenCalled();
     });
-test("acknowledges a concurrent duplicate when another request processes the payment first", async () => {
-  mockTx.payment.findUnique
-    .mockResolvedValueOnce(makePayment())
-    .mockResolvedValueOnce(makePayment({ status: "success" }));
+    test("acknowledges a concurrent duplicate when another request processes the payment first", async () => {
+      mockTx.payment.findUnique
+        .mockResolvedValueOnce(makePayment())
+        .mockResolvedValueOnce(makePayment({ status: "success" }));
 
-  mockTx.payment.updateMany.mockResolvedValue({ count: 0 });
+      mockTx.payment.updateMany.mockResolvedValue({ count: 0 });
 
-  const result = await processPaystackEvent(successEvent());
+      const result = await processPaystackEvent(successEvent());
 
-  expect(result).toMatchObject({
-    received: true,
-    processed: true,
-    duplicate: true,
-    paymentId: "payment-1",
-    boostId: "boost-1",
-  });
+      expect(result).toMatchObject({
+        received: true,
+        processed: true,
+        duplicate: true,
+        paymentId: "payment-1",
+        boostId: "boost-1",
+      });
 
-  expect(mockTx.boost.updateMany).not.toHaveBeenCalled();
-});
-
+      expect(mockTx.boost.updateMany).not.toHaveBeenCalled();
+    });
 
     test("rejects a reference that has no matching payment", async () => {
       mockTx.payment.findUnique.mockResolvedValue(null);
 
-      await expect(
-        processPaystackEvent(successEvent()),
-      ).rejects.toMatchObject({
+      await expect(processPaystackEvent(successEvent())).rejects.toMatchObject({
         status: 404,
         code: "PAYMENT_NOT_FOUND",
       });
@@ -252,9 +240,7 @@ test("acknowledges a concurrent duplicate when another request processes the pay
     test("rolls back the payment update if boost activation fails", async () => {
       mockTx.boost.updateMany.mockResolvedValue({ count: 0 });
 
-      await expect(
-        processPaystackEvent(successEvent()),
-      ).rejects.toMatchObject({
+      await expect(processPaystackEvent(successEvent())).rejects.toMatchObject({
         status: 409,
         code: "BOOST_ALREADY_PROCESSED",
       });

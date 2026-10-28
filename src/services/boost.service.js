@@ -35,8 +35,7 @@ const resolveStartAt = async (profileId, zoneIds, now = new Date()) => {
   });
 
   const tooEarly = current.some(
-    (boost) =>
-      boost.endAt.getTime() - now.getTime() > renew_window_ms,
+    (boost) => boost.endAt.getTime() - now.getTime() > renew_window_ms,
   );
 
   if (tooEarly) {
@@ -48,8 +47,7 @@ const resolveStartAt = async (profileId, zoneIds, now = new Date()) => {
   }
 
   return current.reduce(
-    (latest, boost) =>
-      boost.endAt > latest ? boost.endAt : latest,
+    (latest, boost) => (boost.endAt > latest ? boost.endAt : latest),
     now,
   );
 };
@@ -256,9 +254,7 @@ export const createPendingBoost = async ({
   });
 
   const startAt = new Date();
-  const endAt = new Date(
-    startAt.getTime() + quote.durationDays * dayMs,
-  );
+  const endAt = new Date(startAt.getTime() + quote.durationDays * dayMs);
 
   const paystackReference = `servana_${randomUUID()}`;
 

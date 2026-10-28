@@ -1,4 +1,3 @@
-
 import { createHmac, timingSafeEqual } from "node:crypto";
 import prisma from "../config/prisma.js";
 
@@ -33,15 +32,12 @@ export const verifyPaystackSignature = (
     return false;
   }
 
-  const expected = createHmac("sha512", secret)
-    .update(rawBody)
-    .digest();
+  const expected = createHmac("sha512", secret).update(rawBody).digest();
 
   const received = Buffer.from(signature, "hex");
 
   return (
-    received.length === expected.length &&
-    timingSafeEqual(received, expected)
+    received.length === expected.length && timingSafeEqual(received, expected)
   );
 };
 
@@ -66,7 +62,7 @@ export const processPaystackEvent = async (event) => {
     !data.reference ||
     !Number.isSafeInteger(data.amount) ||
     data.amount < 0 ||
-    typeof data.currency !== "string"  ||
+    typeof data.currency !== "string" ||
     data.status !== "success"
   ) {
     throw httpError(
@@ -174,29 +170,28 @@ export const processPaystackEvent = async (event) => {
       data: { status: "success", paidAt: now },
     });
 
-if (paymentUpdate.count !== 1) {
-  // Another webhook may have completed this payment first.
-  const latestPayment = await tx.payment.findUnique({
-    where: { paystackReference: data.reference },
-  });
+    if (paymentUpdate.count !== 1) {
+      // Another webhook may have completed this payment first.
+      const latestPayment = await tx.payment.findUnique({
+        where: { paystackReference: data.reference },
+      });
 
-  if (latestPayment?.status === "success") {
-    return {
-      received: true,
-      processed: true,
-      duplicate: true,
-      paymentId: latestPayment.id,
-      boostId: latestPayment.boostId,
-    };
-  }
+      if (latestPayment?.status === "success") {
+        return {
+          received: true,
+          processed: true,
+          duplicate: true,
+          paymentId: latestPayment.id,
+          boostId: latestPayment.boostId,
+        };
+      }
 
-  throw httpError(
-    409,
-    "PAYMENT_ALREADY_PROCESSED",
-    "The payment status changed during processing.",
-  );
-}
-
+      throw httpError(
+        409,
+        "PAYMENT_ALREADY_PROCESSED",
+        "The payment status changed during processing.",
+      );
+    }
 
     const boostUpdate = await tx.boost.updateMany({
       where: { id: boost.id, status: "pending" },

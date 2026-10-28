@@ -31,7 +31,7 @@ describe("Boost service", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-   mockPrisma.boost.findMany.mockResolvedValue([]);
+    mockPrisma.boost.findMany.mockResolvedValue([]);
 
     mockPrisma.vendorProfile.findUnique.mockResolvedValue({
       id: "profile-1",
