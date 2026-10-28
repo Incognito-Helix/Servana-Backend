@@ -155,7 +155,11 @@ describe("Review service", () => {
 
     expect(mockPrisma.review.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { profileId: "profile-1", rating: 5 },
+        where: {
+          profileId: "profile-1",
+          rating: 5,
+          moderationStatus: "visible",
+        },
         orderBy: [{ rating: "desc" }, { createdAt: "desc" }],
         skip: 5,
         take: 5,

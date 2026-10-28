@@ -62,11 +62,12 @@ export const cancelBoostController = async (req, res, next) => {
 
 export const createPendingBoostController = async (req, res, next) => {
   try {
-    const boost = await createPendingBoost(req.body);
+    const result = await createPendingBoost(req.body);
+
     return res.status(201).json({
       success: true,
-      message: "Pending boost created.",
-      data: { boost },
+      message: "Pending boost and payment created.",
+      data: result,
     });
   } catch (error) {
     return next(error);
