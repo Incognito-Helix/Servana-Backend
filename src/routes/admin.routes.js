@@ -5,12 +5,17 @@ import {
   getPendingVendorReviewsController,
   approveVendorProfileController,
   rejectVendorProfileController,
+  getReviewReportsController,
+  hideReviewController,
+  dismissReviewReportController,
 } from "../controllers/admin.controller.js";
 import validate from "../middlewares/validate.js";
 import { createBoostSchema } from "../validators/boost.validator.js";
 import {
   createBoostController,
   cancelBoostController,
+  createPendingBoostController,
+  activateBoostController,
 } from "../controllers/boost.controller.js";
 
 const router = express.Router();
@@ -50,5 +55,42 @@ router.patch(
   requireRole("admin"),
   cancelBoostController,
 );
+// Stand ins for checkout and the Paystack webhook, for testing and the demo.
+router.post(
+  "/boosts/pending",
+  auth,
+  requireRole("admin"),
+  validate(createBoostSchema),
+  createPendingBoostController,
+);
 
+router.patch(
+  "/boosts/:boostId/activate",
+  auth,
+  requireRole("admin"),
+  activateBoostController,
+);
+// Get pending review reports
+router.get(
+  "/reviews/reports",
+  auth,
+  requireRole("admin"),
+  getReviewReportsController,
+);
+
+// Hide a reported review
+router.patch(
+  "/reviews/:id/hide",
+  auth,
+  requireRole("admin"),
+  hideReviewController,
+);
+
+// Dismiss a review report
+router.patch(
+  "/reviews/reports/:id/dismiss",
+  auth,
+  requireRole("admin"),
+  dismissReviewReportController,
+);
 export default router;

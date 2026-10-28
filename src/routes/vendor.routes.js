@@ -13,6 +13,7 @@ import {
   workingHoursListSchema,
   // verifyNinSchema,
   signUploadSchema,
+  confirmUploadSchema,
 } from "../validators/vendor.validator.js";
 import {
   createVendorProfile,
@@ -37,7 +38,11 @@ import {
   getVendorOpenNow,
 } from "../controllers/working-hours.controller.js";
 
-import { signUpload } from "../controllers/upload.controller.js";
+import {
+  signUpload,
+  confirmUpload,
+  deletePortfolioImage,
+} from "../controllers/upload.controller.js";
 
 import {
   revealContactController,
@@ -56,7 +61,18 @@ import {
 } from "../validators/review.validator.js";
 import validateQuery from "../middlewares/validateQuery.js";
 
+import { quoteBoostController } from "../controllers/boost.controller.js";
+
+import { quoteBoostSchema } from "../validators/boost.validator.js";
 const router = express.Router();
+
+router.post(
+  "/boosts/quote",
+  auth,
+  requireRole("vendor"),
+  validate(quoteBoostSchema),
+  quoteBoostController,
+);
 
 // "/profile" must stay above "/:id", or Express would read "profile" as an id.
 router.post(
@@ -164,6 +180,23 @@ router.post(
   requireOwnership((req) => getProfileOwnerId(req.params.id)),
   validate(signUploadSchema),
   signUpload,
+);
+
+router.post(
+  "/:id/uploads/confirm",
+  auth,
+  requireRole("vendor"),
+  requireOwnership((req) => getProfileOwnerId(req.params.id)),
+  validate(confirmUploadSchema),
+  confirmUpload,
+);
+
+router.delete(
+  "/:id/portfolio/:imageId",
+  auth,
+  requireRole("vendor"),
+  requireOwnership((req) => getProfileOwnerId(req.params.id)),
+  deletePortfolioImage,
 );
 
 export default router;
