@@ -14,11 +14,8 @@ jest.unstable_mockModule("../src/config/prisma.js", () => ({
   default: mockPrisma,
 }));
 
-const {
-  findActiveBoostId,
-  recordProfileEvent,
-  VIEW_DEDUPE_WINDOW_MS,
-} = await import("../src/services/profile-event.service.js");
+const { findActiveBoostId, recordProfileEvent, VIEW_DEDUPE_WINDOW_MS } =
+  await import("../src/services/profile-event.service.js");
 
 describe("Profile event service", () => {
   afterEach(() => {
@@ -95,7 +92,9 @@ describe("Profile event service", () => {
 
   it("suppresses a duplicate view within the deduplication window", async () => {
     mockPrisma.boost.findFirst.mockResolvedValue(null);
-    mockPrisma.profileEvent.findFirst.mockResolvedValue({ id: "existing-event" });
+    mockPrisma.profileEvent.findFirst.mockResolvedValue({
+      id: "existing-event",
+    });
 
     await expect(
       recordProfileEvent({
