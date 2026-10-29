@@ -12,6 +12,7 @@ import { httpLogger } from "./middlewares/logger.js";
 import uploadRoutes from "./routes/uploads.js";
 import reviewRoutes from "./routes/review.routes.js";
 import paystackWebhookRoutes from "./routes/paystack-webhook.routes.js";
+import paymentRoutes from "./routes/payment.routes.js";
 
 const app = express();
 app.set("trust proxy", 1);
@@ -57,6 +58,7 @@ app.use("/admin", adminRoutes);
 app.use("/search", searchRoutes);
 app.use("/locations", locationRoutes);
 app.use("/reviews", reviewRoutes);
+app.use("/payments", paymentRoutes);
 
 app.use(errorHandler);
 
