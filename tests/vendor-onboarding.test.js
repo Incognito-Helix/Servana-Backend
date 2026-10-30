@@ -1,4 +1,3 @@
-
 import { afterEach, describe, expect, it, jest } from "@jest/globals";
 
 const mockPrisma = {
@@ -19,12 +18,8 @@ jest.unstable_mockModule("../src/config/prisma.js", () => ({
   default: mockPrisma,
 }));
 
-const {
-  createProfile,
-  getOwnProfile,
-  updateProfile,
-  submitProfileForReview,
-} = await import("../src/services/vendor.service.js");
+const { createProfile, getOwnProfile, updateProfile, submitProfileForReview } =
+  await import("../src/services/vendor.service.js");
 
 describe("Vendor onboarding persistence", () => {
   afterEach(() => {

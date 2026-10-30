@@ -27,12 +27,12 @@ export const issueEmailOtp = async (user) => {
 
   try {
     await enqueueEmail({
-    to: user.email,
-    subject: "Verify your Servana email",
-    text: `Your Servana verification code is ${otp}. It expires in 10 minutes.`,
-    html: `<p>Your Servana verification code is:</p><h2>${otp}</h2><p>This code expires in 10 minutes. Do not share it with anyone.</p>`,
-  });
-} catch (error) {
-  console.error("[email-queue] Failed to enqueue OTP email:", error);
-}
+      to: user.email,
+      subject: "Verify your Servana email",
+      text: `Your Servana verification code is ${otp}. It expires in 10 minutes.`,
+      html: `<p>Your Servana verification code is:</p><h2>${otp}</h2><p>This code expires in 10 minutes. Do not share it with anyone.</p>`,
+    });
+  } catch (error) {
+    console.error("[email-queue] Failed to enqueue OTP email:", error);
+  }
 };

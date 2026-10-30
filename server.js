@@ -39,10 +39,7 @@ const shutdown = (signal) => {
     try {
       await stopEmailQueue();
     } catch (stopError) {
-      console.error(
-        "[email-queue] Error stopping worker:",
-        stopError,
-      );
+      console.error("[email-queue] Error stopping worker:", stopError);
       process.exitCode = 1;
     }
 

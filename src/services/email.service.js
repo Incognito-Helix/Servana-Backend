@@ -36,9 +36,7 @@ const sendOnce = async ({ to, subject, html, text }) => {
 export const sendEmail = async (message) => {
   if (process.env.EMAIL_MODE === "log") {
     if (process.env.NODE_ENV === "production") {
-      const error = new Error(
-        "EMAIL_MODE=log is not permitted in production.",
-      );
+      const error = new Error("EMAIL_MODE=log is not permitted in production.");
       error.retryable = false;
       throw error;
     }

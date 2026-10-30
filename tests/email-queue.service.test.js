@@ -1,4 +1,3 @@
-
 import {
   afterEach,
   beforeEach,
@@ -35,19 +34,14 @@ jest.unstable_mockModule("../src/services/email.service.js", () => ({
   sendEmail: mockSendEmail,
 }));
 
-const {
-  EMAIL_QUEUE,
-  startEmailQueue,
-  enqueueEmail,
-  stopEmailQueue,
-} = await import("../src/services/email-queue.service.js");
+const { EMAIL_QUEUE, startEmailQueue, enqueueEmail, stopEmailQueue } =
+  await import("../src/services/email-queue.service.js");
 
 describe("email queue service", () => {
   beforeEach(() => {
     jest.clearAllMocks();
 
-    process.env.DATABASE_URL =
-      "postgresql://test:test@localhost:5432/test";
+    process.env.DATABASE_URL = "postgresql://test:test@localhost:5432/test";
 
     mockStart.mockResolvedValue(undefined);
     mockStop.mockResolvedValue(undefined);
@@ -142,9 +136,9 @@ describe("email queue service", () => {
   });
 
   test("does not enqueue an email before the queue starts", async () => {
-    await expect(
-      enqueueEmail({ to: "user@example.com" }),
-    ).rejects.toThrow("Email queue has not been started.");
+    await expect(enqueueEmail({ to: "user@example.com" })).rejects.toThrow(
+      "Email queue has not been started.",
+    );
   });
 
   test("stops the email queue", async () => {
@@ -162,13 +156,9 @@ describe("email queue service", () => {
   });
 
   test("cleans up when queue startup fails", async () => {
-    mockStart.mockRejectedValueOnce(
-      new Error("Database unavailable"),
-    );
+    mockStart.mockRejectedValueOnce(new Error("Database unavailable"));
 
-    await expect(startEmailQueue()).rejects.toThrow(
-      "Database unavailable",
-    );
+    await expect(startEmailQueue()).rejects.toThrow("Database unavailable");
 
     expect(mockStop).toHaveBeenCalledTimes(1);
   });

@@ -1,11 +1,4 @@
-
-import {
-  beforeEach,
-  describe,
-  expect,
-  jest,
-  test,
-} from "@jest/globals";
+import { beforeEach, describe, expect, jest, test } from "@jest/globals";
 import crypto from "node:crypto";
 
 const mockUpdateMany = jest.fn();
@@ -26,9 +19,7 @@ jest.unstable_mockModule("../src/services/email-queue.service.js", () => ({
   enqueueEmail: mockEnqueueEmail,
 }));
 
-const { issueEmailOtp } = await import(
-  "../src/services/emailOtp.service.js"
-);
+const { issueEmailOtp } = await import("../src/services/emailOtp.service.js");
 
 describe("email OTP service", () => {
   const user = {
@@ -87,15 +78,13 @@ describe("email OTP service", () => {
     const otp = emailMessage.text.match(/\b\d{6}\b/)?.[0];
 
     expect(otp).toBeDefined();
-    expect(
-      crypto.createHash("sha256").update(otp).digest("hex"),
-    ).toBe(tokenData.tokenHash);
+    expect(crypto.createHash("sha256").update(otp).digest("hex")).toBe(
+      tokenData.tokenHash,
+    );
   });
 
   test("does not interrupt OTP issuance when email enqueueing fails", async () => {
-    mockEnqueueEmail.mockRejectedValue(
-      new Error("Email queue unavailable"),
-    );
+    mockEnqueueEmail.mockRejectedValue(new Error("Email queue unavailable"));
 
     await expect(issueEmailOtp(user)).resolves.toBeUndefined();
 
@@ -109,13 +98,9 @@ describe("email OTP service", () => {
   });
 
   test("does not enqueue an email when the OTP database transaction fails", async () => {
-    mockTransaction.mockRejectedValue(
-      new Error("Database unavailable"),
-    );
+    mockTransaction.mockRejectedValue(new Error("Database unavailable"));
 
-    await expect(issueEmailOtp(user)).rejects.toThrow(
-      "Database unavailable",
-    );
+    await expect(issueEmailOtp(user)).rejects.toThrow("Database unavailable");
 
     expect(mockEnqueueEmail).not.toHaveBeenCalled();
   });
