@@ -8,6 +8,7 @@ import {
   getReviewReportsController,
   hideReviewController,
   dismissReviewReportController,
+  refundPaymentController,
 } from "../controllers/admin.controller.js";
 import validate from "../middlewares/validate.js";
 import { createBoostSchema } from "../validators/boost.validator.js";

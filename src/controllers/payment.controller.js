@@ -1,7 +1,7 @@
 import {
   initializePayment,
   getPaymentStatus,
-} from "../services/payment.service.js"
+} from "../services/payment.service.js";
 
 export const initializePaymentController = async (req, res, next) => {
   try {
