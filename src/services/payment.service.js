@@ -1,6 +1,6 @@
 import prisma from "../config/prisma.js";
 import crypto from "crypto";
-import { createBoost, quoteBoost } from "../services/boost.service.js";
+import { createPendingBoost, quoteBoost } from "../services/boost.service.js";
 
 const PAYSTACK_URL = "https://api.paystack.co/transaction/initialize";
 
@@ -53,7 +53,7 @@ export const initializePayment = async (
   };
 
   const quote = await quoteBoost(request);
-  const boost = await createBoost(request);
+  const boost = await createPendingBoost(request);
   const reference = crypto.randomUUID().replace(/-/g, "");
   const payment = await prisma.payment.create({
     data: {
@@ -72,7 +72,7 @@ export const initializePayment = async (
       method: "POST",
       headers: {
         Authorization: `Bearer: ${secret}`,
-        "content-type": "application.json",
+        "content-type": "application/json",
       },
       body: JSON.stringify({
         email: profile.user.email,
@@ -152,16 +152,16 @@ export const failAbandonedPayments = async () => {
     where: { status: "pending", boost: { is: { status: "cancelled" } } },
     data: { status: "failed" },
   });
-  return result;
+  return result.count;
 };
 
 export const markPaymentRefunded = async (paymentId) => {
   const payment = await prisma.payment.findUnique({
-    where: { paymentId },
+    where: { id: paymentId },
     select: { id: true, status: true, boostId: true },
   });
 
-  if (!payment) httpError(404, "PAYMENT_NOT_FOUND", "Payment not found");
+  if (!payment) throw httpError(404, "PAYMENT_NOT_FOUND", "Payment not found");
   if (payment.status !== "refunded") {
     if (payment.status !== "success" && payment.status !== "failed") {
       throw httpError(
