@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import prisma from "../config/prisma.js";
 import { verifyNinWithMock } from "./verification/ninVerification.mock.js";
+import { recordProfileEvent } from "./profile-event.service.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const LOCATION_COOLDOWN_DAYS = 7;
@@ -297,6 +298,16 @@ export const getProfile = async (profileId, viewerId = null) => {
   if (viewerId && profile.userId === viewerId) return toOwner(profile);
 
   if (profile.status !== "approved") throw notFound();
+
+  try {
+    await recordProfileEvent({
+      profileId,
+      type: "view",
+      viewerId,
+    });
+  } catch (error) {
+    console.error("Failed to record profile view:", error);
+  }
 
   return toPublic(profile);
 };
