@@ -40,6 +40,15 @@ const validationError = (fieldErrors) =>
 const notFound = () =>
   httpError(404, "PROFILE_NOT_FOUND", "Vendor profile not found.");
 
+// Everything a profile response needs from related tables.
+const PROFILE_INCLUDE = {
+  socialLinks: true,
+  portfolioImages: {
+    select: { id: true, url: true, sortOrder: true },
+    orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+  },
+};
+
 // What anyone can see. This is an allowlist, so a new column on the table
 // stays private until it is added here on purpose. Phone, WhatsApp, street
 // address and exact coordinates are never public.
@@ -64,6 +73,9 @@ const toPublic = (profile) => ({
     platform,
     url,
   })),
+  portfolioImages: (profile.portfolioImages ?? []).map(
+    ({ id, url, sortOrder }) => ({ id, url, sortOrder }),
+  ),
 });
 
 // What the vendor sees on their own profile.
@@ -249,7 +261,7 @@ export const createProfile = async (userId, input) => {
           userId,
           slug: await uniqueSlug(data.businessName),
         },
-        include: { socialLinks: true },
+        include: PROFILE_INCLUDE,
       });
 
       return toOwner(profile);
@@ -278,7 +290,7 @@ export const createProfile = async (userId, input) => {
 export const getOwnProfile = async (userId) => {
   const profile = await prisma.vendorProfile.findUnique({
     where: { userId },
-    include: { socialLinks: true },
+    include: PROFILE_INCLUDE,
   });
   if (!profile) throw notFound();
 
@@ -290,7 +302,7 @@ export const getOwnProfile = async (userId) => {
 export const getProfile = async (profileId, viewerId = null) => {
   const profile = await prisma.vendorProfile.findUnique({
     where: { id: profileId },
-    include: { socialLinks: true },
+    include: PROFILE_INCLUDE,
   });
 
   if (!profile) throw notFound();
@@ -388,9 +400,21 @@ export const submitProfileForReview = async (userId) => {
       status: "pending",
       rejectionReason: null,
     },
-    include: { socialLinks: true },
+    include: PROFILE_INCLUDE,
   });
 
+  const portfolioCount = await prisma.portfolioImage.count({
+    where: { profileId: existing.id },
+  });
+
+  const photoErrors = {};
+  if (!existing.coverImageUrl) photoErrors.coverImage = "Add a cover photo.";
+  if (!existing.profileImageUrl)
+    photoErrors.profileImage = "Add a profile photo.";
+  if (portfolioCount < 1)
+    photoErrors.portfolio = "Add at least one portfolio photo.";
+
+  if (Object.keys(photoErrors).length) throw validationError(photoErrors);
   return toOwner(profile);
 };
 
@@ -407,6 +431,8 @@ export const getPendingVendorReviews = async () => {
       state: true,
       city: true,
       streetAddress: true,
+      coverImageUrl: true,
+      profileImageUrl: true,
       onboardingStep: true,
       status: true,
       rejectionReason: true,
@@ -482,7 +508,7 @@ export const approveVendorProfile = async (profileId) => {
       status: "approved",
       rejectionReason: null,
     },
-    include: { socialLinks: true },
+    include: PROFILE_INCLUDE,
   });
   return toOwner(profile);
 };
@@ -502,7 +528,7 @@ export const rejectVendorProfile = async (profileId, reason) => {
       status: "rejected",
       rejectionReason: reason.trim(),
     },
-    include: { socialLinks: true },
+    include: PROFILE_INCLUDE,
   });
   return toOwner(profile);
 };

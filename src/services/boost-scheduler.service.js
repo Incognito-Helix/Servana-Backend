@@ -1,6 +1,7 @@
 import cron from "node-cron";
 import prisma from "../config/prisma.js";
 import { sendEmail } from "./email.service.js";
+import { failAbandonedPayments } from "./payment.service.js";
 
 const HOUR_MS = 60 * 60 * 1000;
 const REMINDER_WINDOW_HOURS = 24;
@@ -188,9 +189,10 @@ export const sendBoostExpiryReminders = async (now = new Date()) => {
 export const runBoostMaintenance = async (now = new Date()) => {
   const expired = await expireBoosts(now);
   const cancelled = await cancelStalePendingBoosts(now);
+  const failedPayments = await failAbandonedPayments();
   const reminders = await sendBoostExpiryReminders(now);
 
-  return { expired, cancelled, reminders };
+  return { expired, cancelled, failedPayments, reminders };
 };
 
 export const startBoostScheduler = () => {

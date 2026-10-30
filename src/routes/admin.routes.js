@@ -8,6 +8,7 @@ import {
   getReviewReportsController,
   hideReviewController,
   dismissReviewReportController,
+  refundPaymentController,
 } from "../controllers/admin.controller.js";
 import validate from "../middlewares/validate.js";
 import { createBoostSchema } from "../validators/boost.validator.js";
@@ -92,5 +93,12 @@ router.patch(
   auth,
   requireRole("admin"),
   dismissReviewReportController,
+);
+
+router.patch(
+  "/payments/:paymentId/refund",
+  auth,
+  requireRole("admin"),
+  refundPaymentController,
 );
 export default router;

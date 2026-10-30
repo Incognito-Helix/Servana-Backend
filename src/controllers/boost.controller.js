@@ -20,7 +20,7 @@ export const quoteBoostController = async (req, res, next) => {
       error.code = "PROFILE_NOT_FOUND";
       return next(error);
     }
-    const quote = await quoteBoost(req.body);
+    const quote = await quoteBoost({ ...req.body, profileId: profile.id });
 
     return res.status(200).json({
       success: true,

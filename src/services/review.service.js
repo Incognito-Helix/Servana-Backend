@@ -219,10 +219,10 @@ export const reportReview = async (reporterId, reviewId, reason) => {
   if (
     !reporter ||
     reporter.status !== "active" ||
-    ["customer", "vendor"].includes(reporter.role)
+    !["customer", "vendor"].includes(reporter.role)
   )
     throw httpError(
-      404,
+      403,
       "FORBIDDEN",
       "only active customers and vendors can report reviews",
     );
