@@ -93,4 +93,11 @@ router.patch(
   requireRole("admin"),
   dismissReviewReportController,
 );
+
+router.patch(
+  "/payments/:paymentId/refund",
+  auth,
+  requireRole("admin"),
+  refundPaymentController,
+);
 export default router;

@@ -2,7 +2,7 @@ import prisma from "../config/prisma.js";
 import crypto from "crypto";
 import { createBoost, quoteBoost } from "../services/boost.service.js";
 
-const PAYSTACK_URL = "";
+const PAYSTACK_URL = "https://api.paystack.co/transaction/initialize";
 
 const httpError = (status, code, message) => {
   const error = new Error(message);
@@ -34,7 +34,7 @@ export const initializePayment = async (
   userId,
   { categoryId, type, durationType, zoneIds },
 ) => {
-  const secret = process.env.PAYSTACK_SECRET;
+  const secret = process.env.PAYSTACK_SECRET_KEY;
 
   if (!secret)
     throw httpError(
@@ -145,4 +145,53 @@ export const getPaymentStatus = async (userId, reference) => {
     paidAt: payment.paidAt,
     boost: payment.boost,
   };
+};
+
+export const failAbandonedPayments = async () => {
+  const result = await prisma.payment.updateMany({
+    where: { status: "pending", boost: { is: { status: "cancelled" } } },
+    data: { status: "failed" },
+  });
+  return result;
+};
+
+export const markPaymentRefunded = async (paymentId) => {
+  const payment = await prisma.payment.findUnique({
+    where: { paymentId },
+    select: { id: true, status: true, boostId: true },
+  });
+
+  if (!payment) httpError(404, "PAYMENT_NOT_FOUND", "Payment not found");
+  if (payment.status !== "refunded") {
+    if (payment.status !== "success" && payment.status !== "failed") {
+      throw httpError(
+        409,
+        "INVALID_PAYMENT_STATUS",
+        "Only successful or failed payments can be marked refunded.",
+      );
+    }
+
+    await prisma.$transaction([
+      prisma.payment.update({
+        where: { id: payment.id },
+        data: { status: "refunded" },
+      }),
+
+      prisma.boost.updateMany({
+        where: { id: payment.boostId, status: { in: ["pending", "active"] } },
+        data: { status: "cancelled" },
+      }),
+    ]);
+  }
+
+  return prisma.payment.findUnique({
+    where: { id: payment.id },
+    select: {
+      id: true,
+      status: true,
+      amountKobo: true,
+      paystackReference: true,
+      boost: { select: { id: true, status: true } },
+    },
+  });
 };

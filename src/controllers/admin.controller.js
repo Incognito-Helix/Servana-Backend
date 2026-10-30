@@ -8,6 +8,7 @@ import {
   hideReview,
   dismissReviewReport,
 } from "../services/reviewModeration.service.js";
+import { markPaymentRefunded } from "../services/payment.service.js";
 
 export const getPendingVendorReviewsController = async (req, res, next) => {
   try {
@@ -88,6 +89,19 @@ export const dismissReviewReportController = async (req, res, next) => {
       success: true,
       message: "Review report dismissed successfully.",
       data: result,
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const refundPaymentController = async (req, res, next) => {
+  try {
+    const payment = await markPaymentRefunded(req.params.paymentId);
+    return res.status(200).json({
+      success: true,
+      message: "Payment marked as refunded.",
+      data: { payment },
     });
   } catch (error) {
     return next(error);
