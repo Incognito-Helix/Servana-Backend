@@ -1,3 +1,4 @@
+
 import { afterEach, describe, expect, it, jest } from "@jest/globals";
 
 const mockPrisma = {
@@ -12,8 +13,23 @@ jest.unstable_mockModule("../src/config/prisma.js", () => ({
   default: mockPrisma,
 }));
 
-const { getPendingVendorReviews, approveVendorProfile, rejectVendorProfile } =
-  await import("../src/services/vendor.service.js");
+const {
+  getPendingVendorReviews,
+  approveVendorProfile,
+  rejectVendorProfile,
+} = await import("../src/services/vendor.service.js");
+
+const PROFILE_INCLUDE = {
+  socialLinks: true,
+  portfolioImages: {
+    select: {
+      id: true,
+      url: true,
+      sortOrder: true,
+    },
+    orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+  },
+};
 
 describe("Vendor review queue", () => {
   afterEach(() => {
@@ -46,6 +62,7 @@ describe("Vendor review queue", () => {
     const result = await getPendingVendorReviews();
 
     expect(result).toEqual(pendingProfiles);
+
     expect(mockPrisma.vendorProfile.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { status: "pending" },
@@ -73,6 +90,7 @@ describe("Vendor profile approval and rejection", () => {
       status: "approved",
       rejectionReason: null,
       socialLinks: [],
+      portfolioImages: [],
       avgRating: 0,
       reviewCount: 0,
     });
@@ -80,13 +98,14 @@ describe("Vendor profile approval and rejection", () => {
     const result = await approveVendorProfile("profile-1");
 
     expect(result.status).toBe("approved");
+
     expect(mockPrisma.vendorProfile.update).toHaveBeenCalledWith({
       where: { id: "profile-1" },
       data: {
         status: "approved",
         rejectionReason: null,
       },
-      include: { socialLinks: true },
+      include: PROFILE_INCLUDE,
     });
   });
 
@@ -103,6 +122,7 @@ describe("Vendor profile approval and rejection", () => {
       status: "rejected",
       rejectionReason: "Please provide more business details.",
       socialLinks: [],
+      portfolioImages: [],
       avgRating: 0,
       reviewCount: 0,
     });
@@ -113,13 +133,14 @@ describe("Vendor profile approval and rejection", () => {
     );
 
     expect(result.status).toBe("rejected");
+
     expect(mockPrisma.vendorProfile.update).toHaveBeenCalledWith({
       where: { id: "profile-1" },
       data: {
         status: "rejected",
         rejectionReason: "Please provide more business details.",
       },
-      include: { socialLinks: true },
+      include: PROFILE_INCLUDE,
     });
   });
 
@@ -138,12 +159,12 @@ describe("Vendor profile approval and rejection", () => {
   });
 
   it("rejects an empty rejection reason", async () => {
-    await expect(rejectVendorProfile("profile-1", "   ")).rejects.toMatchObject(
-      {
-        status: 400,
-        code: "VALIDATION_ERROR",
-      },
-    );
+    await expect(
+      rejectVendorProfile("profile-1", "   "),
+    ).rejects.toMatchObject({
+      status: 400,
+      code: "VALIDATION_ERROR",
+    });
 
     expect(mockPrisma.vendorProfile.update).not.toHaveBeenCalled();
   });
@@ -151,12 +172,12 @@ describe("Vendor profile approval and rejection", () => {
   it("returns not found when approving a missing profile", async () => {
     mockPrisma.vendorProfile.findUnique.mockResolvedValue(null);
 
-    await expect(approveVendorProfile("missing-profile")).rejects.toMatchObject(
-      {
-        status: 404,
-        code: "PROFILE_NOT_FOUND",
-      },
-    );
+    await expect(
+      approveVendorProfile("missing-profile"),
+    ).rejects.toMatchObject({
+      status: 404,
+      code: "PROFILE_NOT_FOUND",
+    });
 
     expect(mockPrisma.vendorProfile.update).not.toHaveBeenCalled();
   });

@@ -1,3 +1,4 @@
+
 import { afterEach, describe, expect, it, jest } from "@jest/globals";
 
 const mockPrisma = {
@@ -9,14 +10,21 @@ const mockPrisma = {
   zone: {
     findFirst: jest.fn(),
   },
+  portfolioImage: {
+    count: jest.fn(),
+  },
 };
 
 jest.unstable_mockModule("../src/config/prisma.js", () => ({
   default: mockPrisma,
 }));
 
-const { createProfile, getOwnProfile, updateProfile, submitProfileForReview } =
-  await import("../src/services/vendor.service.js");
+const {
+  createProfile,
+  getOwnProfile,
+  updateProfile,
+  submitProfileForReview,
+} = await import("../src/services/vendor.service.js");
 
 describe("Vendor onboarding persistence", () => {
   afterEach(() => {
@@ -39,9 +47,20 @@ describe("Vendor onboarding persistence", () => {
 
     expect(profile.onboardingStep).toBe(4);
     expect(profile.status).toBe("draft");
+
     expect(mockPrisma.vendorProfile.findUnique).toHaveBeenCalledWith({
       where: { userId: "user-1" },
-      include: { socialLinks: true },
+      include: {
+        socialLinks: true,
+        portfolioImages: {
+          select: {
+            id: true,
+            url: true,
+            sortOrder: true,
+          },
+          orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+        },
+      },
     });
   });
 
@@ -77,11 +96,13 @@ describe("Vendor onboarding persistence", () => {
         data: expect.objectContaining({ onboardingStep: 4 }),
       }),
     );
+
     expect(profile.onboardingStep).toBe(4);
   });
 
   it("creates a vendor profile as a draft at the first step", async () => {
     mockPrisma.vendorProfile.findUnique.mockResolvedValue(null);
+
     mockPrisma.vendorProfile.create.mockImplementation(async ({ data }) => ({
       id: "profile-1",
       ...data,
@@ -118,77 +139,83 @@ describe("Vendor onboarding persistence", () => {
     expect(profile.status).toBe("draft");
     expect(mockPrisma.vendorProfile.create).toHaveBeenCalled();
   });
-});
 
-it("transitions a completed draft profile to pending review", async () => {
-  mockPrisma.vendorProfile.findUnique.mockResolvedValue({
-    id: "profile-1",
-    userId: "user-1",
-    onboardingStep: 6,
-    status: "draft",
-    rejectionReason: null,
-    zoneId: "zone-1",
-    latitude: 6.45,
-    longitude: 3.4,
-    isVerified: true,
-  });
+  it("transitions a completed draft profile to pending review", async () => {
+    mockPrisma.vendorProfile.findUnique.mockResolvedValue({
+      id: "profile-1",
+      userId: "user-1",
+      onboardingStep: 6,
+      status: "draft",
+      rejectionReason: null,
+      zoneId: "zone-1",
+      latitude: 6.45,
+      longitude: 3.4,
+      isVerified: true,
+      coverImageUrl: "https://example.com/cover.jpg",
+      profileImageUrl: "https://example.com/profile.jpg",
+    });
 
-  mockPrisma.vendorProfile.update.mockResolvedValue({
-    id: "profile-1",
-    userId: "user-1",
-    slug: "test-business",
-    businessName: "Test Business",
-    onboardingStep: 6,
-    status: "pending",
-    rejectionReason: null,
-    avgRating: 0,
-    reviewCount: 0,
-  });
+    mockPrisma.portfolioImage.count.mockResolvedValue(1);
 
-  const profile = await submitProfileForReview("user-1");
-
-  expect(profile.status).toBe("pending");
-  expect(mockPrisma.vendorProfile.update).toHaveBeenCalledWith({
-    where: { id: "profile-1" },
-    data: {
+    mockPrisma.vendorProfile.update.mockResolvedValue({
+      id: "profile-1",
+      userId: "user-1",
+      slug: "test-business",
+      businessName: "Test Business",
+      onboardingStep: 6,
       status: "pending",
       rejectionReason: null,
-    },
-    include: { socialLinks: true },
-  });
-});
+      avgRating: 0,
+      reviewCount: 0,
+    });
 
-it("does not submit a profile before step 6", async () => {
-  mockPrisma.vendorProfile.update.mockClear();
+    const profile = await submitProfileForReview("user-1");
 
-  mockPrisma.vendorProfile.findUnique.mockResolvedValue({
-    id: "profile-1",
-    userId: "user-1",
-    onboardingStep: 4,
-    status: "draft",
-  });
+    expect(profile.status).toBe("pending");
 
-  await expect(submitProfileForReview("user-1")).rejects.toMatchObject({
-    code: "VALIDATION_ERROR",
-  });
+    expect(mockPrisma.portfolioImage.count).toHaveBeenCalledWith({
+      where: { profileId: "profile-1" },
+    });
 
-  expect(mockPrisma.vendorProfile.update).not.toHaveBeenCalled();
-});
-
-it("does not allow an approved profile to be resubmitted", async () => {
-  mockPrisma.vendorProfile.update.mockClear();
-
-  mockPrisma.vendorProfile.findUnique.mockResolvedValue({
-    id: "profile-1",
-    userId: "user-1",
-    onboardingStep: 6,
-    status: "approved",
+    expect(mockPrisma.vendorProfile.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "profile-1" },
+        data: {
+          status: "pending",
+          rejectionReason: null,
+        },
+      }),
+    );
   });
 
-  await expect(submitProfileForReview("user-1")).rejects.toMatchObject({
-    code: "INVALID_PROFILE_STATUS",
-    status: 409,
+  it("does not submit a profile before step 6", async () => {
+    mockPrisma.vendorProfile.findUnique.mockResolvedValue({
+      id: "profile-1",
+      userId: "user-1",
+      onboardingStep: 4,
+      status: "draft",
+    });
+
+    await expect(submitProfileForReview("user-1")).rejects.toMatchObject({
+      code: "VALIDATION_ERROR",
+    });
+
+    expect(mockPrisma.vendorProfile.update).not.toHaveBeenCalled();
   });
 
-  expect(mockPrisma.vendorProfile.update).not.toHaveBeenCalled();
+  it("does not allow an approved profile to be resubmitted", async () => {
+    mockPrisma.vendorProfile.findUnique.mockResolvedValue({
+      id: "profile-1",
+      userId: "user-1",
+      onboardingStep: 6,
+      status: "approved",
+    });
+
+    await expect(submitProfileForReview("user-1")).rejects.toMatchObject({
+      code: "INVALID_PROFILE_STATUS",
+      status: 409,
+    });
+
+    expect(mockPrisma.vendorProfile.update).not.toHaveBeenCalled();
+  });
 });

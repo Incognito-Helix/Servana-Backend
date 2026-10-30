@@ -1,15 +1,19 @@
 import "dotenv/config";
-const RESEND_URL = "https://api.resend.com/emails";
-const MAX_ATTEMPTS = 3;
 
-const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const RESEND_URL = "https://api.resend.com/emails";
 
 const sendOnce = async ({ to, subject, html, text }) => {
+  if (!process.env.RESEND_API_KEY || !process.env.EMAIL_FROM) {
+    const error = new Error("Resend email configuration is missing.");
+    error.retryable = false;
+    throw error;
+  }
+
   const response = await fetch(RESEND_URL, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-      "Content-type": "application/json",
+      "Content-Type": "application/json",
     },
     body: JSON.stringify({
       from: process.env.EMAIL_FROM,
@@ -21,40 +25,29 @@ const sendOnce = async ({ to, subject, html, text }) => {
   });
 
   if (!response.ok) {
-    const error = new Error(`Resend responded ${response.status}`);
+    const error = new Error(`Resend responded with status ${response.status}.`);
     error.retryable = response.status >= 500 || response.status === 429;
     throw error;
   }
+
+  return true;
 };
 
 export const sendEmail = async (message) => {
   if (process.env.EMAIL_MODE === "log") {
     if (process.env.NODE_ENV === "production") {
-      console.error("email_mode = log isnt adviced during production");
-    } else {
-      console.log(
-        `[email:log] to=${message.to} subject="${message.subject}"\n${message.text}`,
+      const error = new Error(
+        "EMAIL_MODE=log is not permitted in production.",
       );
-      return true;
+      error.retryable = false;
+      throw error;
     }
-  }
 
-  if (!process.env.RESEND_API_KEY || !process.env.EMAIL_FROM) {
-    console.error("resend key is missing");
-    return false;
-  }
+    console.log(
+      `[email:log] to=${message.to} subject="${message.subject}"\n${message.text}`,
+    );
 
-  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
-    try {
-      await sendOnce(message);
-      return true;
-    } catch (error) {
-      console.error(
-        `Email attempt ${attempt} of ${MAX_ATTEMPTS} failed: ${error.message}`,
-      );
-      if (error.retryable === false) return false;
-      if (attempt < MAX_ATTEMPTS) await wait(attempt * 1000);
-    }
+    return true;
   }
-  return false;
+  return sendOnce(message);
 };

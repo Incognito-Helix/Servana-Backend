@@ -362,7 +362,6 @@ export const getProfileOwnerId = async (profileId) => {
 
   return profile ? profile.userId : null;
 };
-
 export const submitProfileForReview = async (userId) => {
   const existing = await prisma.vendorProfile.findUnique({
     where: { userId },
@@ -389,11 +388,41 @@ export const submitProfileForReview = async (userId) => {
     existing.latitude == null ||
     existing.longitude == null
   ) {
-    throw validationError({ zoneId: "choose your location before submitting" });
+    throw validationError({
+      zoneId: "choose your location before submitting",
+    });
   }
-  if (!existing.isVerified)
-    throw validationError({ nin: "verify your NIN before submitting" });
 
+  if (!existing.isVerified) {
+    throw validationError({
+      nin: "verify your NIN before submitting",
+    });
+  }
+
+  // Validate required photos before changing the profile status.
+  const portfolioCount = await prisma.portfolioImage.count({
+    where: { profileId: existing.id },
+  });
+
+  const photoErrors = {};
+
+  if (!existing.coverImageUrl) {
+    photoErrors.coverImage = "Add a cover photo.";
+  }
+
+  if (!existing.profileImageUrl) {
+    photoErrors.profileImage = "Add a profile photo.";
+  }
+
+  if (portfolioCount < 1) {
+    photoErrors.portfolio = "Add at least one portfolio photo.";
+  }
+
+  if (Object.keys(photoErrors).length) {
+    throw validationError(photoErrors);
+  }
+
+  // Only update after every submission requirement passes.
   const profile = await prisma.vendorProfile.update({
     where: { id: existing.id },
     data: {
@@ -403,21 +432,8 @@ export const submitProfileForReview = async (userId) => {
     include: PROFILE_INCLUDE,
   });
 
-  const portfolioCount = await prisma.portfolioImage.count({
-    where: { profileId: existing.id },
-  });
-
-  const photoErrors = {};
-  if (!existing.coverImageUrl) photoErrors.coverImage = "Add a cover photo.";
-  if (!existing.profileImageUrl)
-    photoErrors.profileImage = "Add a profile photo.";
-  if (portfolioCount < 1)
-    photoErrors.portfolio = "Add at least one portfolio photo.";
-
-  if (Object.keys(photoErrors).length) throw validationError(photoErrors);
   return toOwner(profile);
 };
-
 export const getPendingVendorReviews = async () => {
   return prisma.vendorProfile.findMany({
     where: { status: "pending" },
