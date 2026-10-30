@@ -1,5 +1,6 @@
 import prisma from "../config/prisma.js";
 import { Prisma } from "@prisma/client";
+import { recordProfileEvent } from "./profile-event.service.js";
 
 const EARTH_RADIUS_KM = 6371;
 const DEFAULT_SEARCH_RADIUS_KM = 10;
@@ -440,6 +441,15 @@ export const searchVendors = async ({
       },
     ];
   });
+
+  await Promise.allSettled(
+    vendors.map((vendor) =>
+      recordProfileEvent({
+        profileId: vendor.id,
+        type: "impression",
+      }),
+    ),
+  );
 
   return {
     vendors,
