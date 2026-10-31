@@ -71,7 +71,7 @@ export const initializePayment = async (
     const response = await fetch(PAYSTACK_URL, {
       method: "POST",
       headers: {
-        Authorization: `Bearer: ${secret}`,
+        Authorization: `Bearer ${secret}`,
         "content-type": "application/json",
       },
       body: JSON.stringify({

@@ -64,6 +64,9 @@ import validateQuery from "../middlewares/validateQuery.js";
 import { quoteBoostController } from "../controllers/boost.controller.js";
 
 import { quoteBoostSchema } from "../validators/boost.validator.js";
+import { vendorCategoriesSchema } from "../validators/catalog.validator.js";
+import { setVendorCategoriesController } from "../controllers/catalog.controller.js";
+
 const router = express.Router();
 
 router.post(
@@ -158,6 +161,15 @@ router.put(
   requireOwnership((req) => getProfileOwnerId(req.params.id)),
   validate(workingHoursListSchema),
   saveVendorWorkingHours,
+);
+// Primary service plus up to 3 others. Replaces the whole set each time.
+router.put(
+  "/:id/categories",
+  auth,
+  requireRole("vendor"),
+  requireOwnership((req) => getProfileOwnerId(req.params.id)),
+  validate(vendorCategoriesSchema),
+  setVendorCategoriesController,
 );
 router.post("/:id/contact", auth, revealContactController);
 router.post("/:id/contact-tap", auth, contactTapController);

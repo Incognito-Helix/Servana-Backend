@@ -13,6 +13,8 @@ import uploadRoutes from "./routes/uploads.js";
 import reviewRoutes from "./routes/review.routes.js";
 import paystackWebhookRoutes from "./routes/paystack-webhook.routes.js";
 import paymentRoutes from "./routes/payment.routes.js";
+import catalogRoutes from "./routes/catalog.routes.js";
+import adminCatalogRoutes from "./routes/admin-catalog.routes.js";
 
 const app = express();
 app.set("trust proxy", 1);
@@ -54,9 +56,11 @@ app.use("/vendors", vendorRoutes);
 app.use("/verifications", verificationRoutes);
 
 app.use("/admin", adminRoutes);
+app.use("/admin", adminCatalogRoutes);
 
 app.use("/search", searchRoutes);
 app.use("/locations", locationRoutes);
+app.use(catalogRoutes);
 app.use("/reviews", reviewRoutes);
 app.use("/payments", paymentRoutes);
 

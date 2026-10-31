@@ -120,13 +120,22 @@ export const quoteBoost = async ({
     zoneIds,
   });
 
-  const basePriceKobo = BOOST_BASE_PRICES_KOBO[type]?.[durationType];
+  const defaultPriceKobo = BOOST_BASE_PRICES_KOBO[type]?.[durationType];
 
-  if (!basePriceKobo || !durationDays[durationType]) {
+  if (!defaultPriceKobo || !durationDays[durationType]) {
     throw validationError({
       durationType: "Unsupported boost type or duration.",
     });
   }
+
+  // The admin can change base prices. The constants above are the fallback
+  // for any price the admin has not set.
+  const priceRow = await prisma.boostPrice.findUnique({
+    where: { type_durationType: { type, durationType } },
+    select: { priceKobo: true },
+  });
+
+  const basePriceKobo = priceRow?.priceKobo ?? defaultPriceKobo;
 
   const zoneQuotes = zones.map((zone) => {
     const multiplier = Number(zone.boostPriceMultiplier);

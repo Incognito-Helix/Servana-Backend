@@ -160,6 +160,12 @@ enum BoostType {
   zone_boost
 }
 
+enum BoostDuration {
+  daily
+  weekly
+  monthly
+}
+
 enum BoostStatus {
   pending
   active
@@ -478,4 +484,14 @@ model AuditLog {
   @@index([entityType, entityId])
   @@index([actorId, createdAt])
   @@map("audit_logs")
+}
+model BoostPrice {
+  id           String        @id @default(uuid())
+  type         BoostType
+  durationType BoostDuration
+  priceKobo    Int
+  updatedAt    DateTime      @updatedAt
+
+  @@unique([type, durationType])
+  @@map("boost_prices")
 }
