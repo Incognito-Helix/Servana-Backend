@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import prisma from "../config/prisma.js";
-import { sendEmail } from "./email.service.js";
+import { enqueueEmail } from "./email-queue.service.js";
 
 const otpExpiresIn = 10;
 
@@ -25,10 +25,14 @@ export const issueEmailOtp = async (user) => {
     });
   });
 
-  sendEmail({
-    to: user.email,
-    subject: "Verify your Servana email",
-    text: `Your Servana verification code is ${otp}. It expires in 10 minutes.`,
-    html: `<p>Your Servana verification code is:</p><h2>${otp}</h2><p>This code expires in 10 minutes. Do not share it with anyone.</p>`,
-  });
+  try {
+    await enqueueEmail({
+      to: user.email,
+      subject: "Verify your Servana email",
+      text: `Your Servana verification code is ${otp}. It expires in 10 minutes.`,
+      html: `<p>Your Servana verification code is:</p><h2>${otp}</h2><p>This code expires in 10 minutes. Do not share it with anyone.</p>`,
+    });
+  } catch (error) {
+    console.error("[email-queue] Failed to enqueue OTP email:", error);
+  }
 };
