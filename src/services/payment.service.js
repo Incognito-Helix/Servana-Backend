@@ -66,8 +66,8 @@ export const initializePayment = async (
       },
       body: JSON.stringify({
         email: profile.user.email,
-        amount: quote.totalPriceKobo,
-        currency: "NGN",
+        amount: payment.amountKobo,
+        currency: payment.currency,
         reference,
         metadata: { paymentId: payment.id, boostId: boost.id },
       }),
@@ -103,8 +103,8 @@ export const initializePayment = async (
     reference,
     accessCode: paystack.data.access_code,
     authorizationUrl: paystack.data.authorization_url,
-    amountKobo: quote.totalPriceKobo,
-    amountNaira: quote.totalPriceNaira,
+    amountKobo: payment.amountKobo,
+    amountNaira: payment.amountKobo / 100,
     boost,
   };
 };
