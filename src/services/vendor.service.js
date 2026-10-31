@@ -47,6 +47,14 @@ const PROFILE_INCLUDE = {
     select: { id: true, url: true, sortOrder: true },
     orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
   },
+  categories: {
+    select: {
+      isPrimary: true,
+      category: {
+        select: { id: true, name: true, slug: true, parentId: true },
+      },
+    },
+  },
 };
 
 // What anyone can see. This is an allowlist, so a new column on the table
@@ -75,7 +83,10 @@ const toPublic = (profile) => ({
   })),
   portfolioImages: (profile.portfolioImages ?? []).map(
     ({ id, url, sortOrder }) => ({ id, url, sortOrder }),
-  ),
+  ), // Primary service first, then the others.
+  categories: (profile.categories ?? [])
+    .map(({ isPrimary, category }) => ({ ...category, isPrimary }))
+    .sort((a, b) => Number(b.isPrimary) - Number(a.isPrimary)),
 });
 
 // What the vendor sees on their own profile.
@@ -128,6 +139,21 @@ const phoneTaken = () =>
     "This phone number is already used by another vendor.",
     { phone: "This phone number is already used by another vendor." },
   );
+
+const hasBoostInEffect = async (profileId) => {
+  const now = new Date();
+  const boost = await prisma.boost.findFirst({
+    where: {
+      profileId,
+      status: "active",
+      startAt: { lte: now },
+      endAt: { gt: now },
+    },
+    select: { id: true },
+  });
+
+  return Boolean(boost);
+};
 
 // Turns the validated request into the columns to write, and applies the
 // rules that depend on more than one field or on what is already saved.
@@ -217,7 +243,7 @@ const buildChanges = async (input, existing = null) => {
         existing.locationChangedAt.getTime() + LOCATION_COOLDOWN_DAYS * DAY_MS,
       );
 
-      if (nextChange > new Date()) {
+      if (nextChange > new Date() && !(await hasBoostInEffect(existing.id))) {
         throw httpError(
           403,
           "LOCATION_COOLDOWN",
@@ -365,6 +391,9 @@ export const getProfileOwnerId = async (profileId) => {
 export const submitProfileForReview = async (userId) => {
   const existing = await prisma.vendorProfile.findUnique({
     where: { userId },
+    include: {
+      categories: { where: { isPrimary: true }, select: { id: true } },
+    },
   });
 
   if (!existing) throw notFound();
@@ -405,6 +434,10 @@ export const submitProfileForReview = async (userId) => {
   });
 
   const photoErrors = {};
+
+  if (!existing.categories?.length) {
+    photoErrors.categories = "Choose your primary service.";
+  }
 
   if (!existing.coverImageUrl) {
     photoErrors.coverImage = "Add a cover photo.";
@@ -796,4 +829,23 @@ export const verifyVendorNin = async (userId, nin) => {
 
     return verification;
   });
+};
+
+// PRD 4.6: the admin can lift the cooldown for genuine cases, like a
+// mistyped address. The vendor can then change their location once.
+export const resetLocationCooldown = async (profileId) => {
+  const existing = await prisma.vendorProfile.findUnique({
+    where: { id: profileId },
+    select: { id: true },
+  });
+
+  if (!existing) throw notFound();
+
+  const profile = await prisma.vendorProfile.update({
+    where: { id: profileId },
+    data: { locationChangedAt: null },
+    include: PROFILE_INCLUDE,
+  });
+
+  return toOwner(profile);
 };

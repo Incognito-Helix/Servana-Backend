@@ -1,5 +1,4 @@
 import prisma from "../config/prisma.js";
-import crypto from "crypto";
 import { createPendingBoost, quoteBoost } from "../services/boost.service.js";
 
 const PAYSTACK_URL = "https://api.paystack.co/transaction/initialize";
@@ -52,18 +51,9 @@ export const initializePayment = async (
     zoneIds,
   };
 
-  const quote = await quoteBoost(request);
-  const boost = await createPendingBoost(request);
-  const reference = crypto.randomUUID().replace(/-/g, "");
-  const payment = await prisma.payment.create({
-    data: {
-      userId,
-      boostId: boost.id,
-      paystackReference: reference,
-      amountKobo: quote.totalPriceKobo,
-      currency: "NGN",
-    },
-  });
+  await quoteBoost(request);
+  const { boost, payment } = await createPendingBoost(request);
+  const reference = payment.reference;
 
   let paystack;
 
@@ -71,13 +61,13 @@ export const initializePayment = async (
     const response = await fetch(PAYSTACK_URL, {
       method: "POST",
       headers: {
-        Authorization: `Bearer: ${secret}`,
+        Authorization: `Bearer ${secret}`,
         "content-type": "application/json",
       },
       body: JSON.stringify({
         email: profile.user.email,
-        amount: quote.totalPriceKobo,
-        currency: "NGN",
+        amount: payment.amountKobo,
+        currency: payment.currency,
         reference,
         metadata: { paymentId: payment.id, boostId: boost.id },
       }),
@@ -113,8 +103,8 @@ export const initializePayment = async (
     reference,
     accessCode: paystack.data.access_code,
     authorizationUrl: paystack.data.authorization_url,
-    amountKobo: quote.totalPriceKobo,
-    amountNaira: quote.totalPriceNaira,
+    amountKobo: payment.amountKobo,
+    amountNaira: payment.amountKobo / 100,
     boost,
   };
 };

@@ -184,9 +184,49 @@ const verifiedAssetUrl = async (profileId, kind, publicId) => {
   });
 };
 
+// Turns a saved delivery URL back into its Cloudinary public id, for example
+// https://res.cloudinary.com/<cloud>/image/upload/servana/vendors/<id>/cover/abc.jpg
+// becomes servana/vendors/<id>/cover/abc.
+const publicIdFromUrl = (deliveryUrl) => {
+  const marker = "/image/upload/";
+  const index =
+    typeof deliveryUrl === "string" ? deliveryUrl.indexOf(marker) : -1;
+  if (index === -1) return null;
+
+  return (
+    deliveryUrl
+      .slice(index + marker.length)
+      .replace(/\.(?:jpe?g|png|webp)$/, "") || null
+  );
+};
+
+// Removes a photo file from Cloudinary after the database change is saved.
+// Best effort: if Cloudinary is down, the photo is already gone from the
+// profile, so we log it instead of failing the vendor's request.
+const destroyAsset = async (deliveryUrl) => {
+  const publicId = publicIdFromUrl(deliveryUrl);
+
+  // Only ever delete files inside the vendor folders this app created.
+  if (!publicId || !publicId.startsWith("servana/vendors/")) return;
+
+  try {
+    await cloudinary.uploader.destroy(publicId, {
+      resource_type: "image",
+      invalidate: true,
+    });
+  } catch (error) {
+    console.error(
+      `Cloudinary cleanup failed for ${publicId}:`,
+      error?.message || error,
+    );
+  }
+};
+
 export const confirmVendorUpload = async (profileId, kind, publicId) => {
   const url = await verifiedAssetUrl(profileId, kind, publicId);
-  return prisma.$transaction(
+  let replacedUrl = null;
+
+  const snapshot = await prisma.$transaction(
     async (tx) => {
       await lockPhotoProfile(tx, profileId);
       if (kind === "portfolio") {
@@ -212,6 +252,13 @@ export const confirmVendorUpload = async (profileId, kind, publicId) => {
         }
       } else {
         const column = kind === "cover" ? "coverImageUrl" : "profileImageUrl";
+        const current = await tx.vendorProfile.findUnique({
+          where: { id: profileId },
+          select: { [column]: true },
+        });
+        if (current?.[column] && current[column] !== url) {
+          replacedUrl = current[column];
+        }
         await tx.vendorProfile.update({
           where: { id: profileId },
           data: { [column]: url },
@@ -221,15 +268,20 @@ export const confirmVendorUpload = async (profileId, kind, publicId) => {
     },
     { isolationLevel: "ReadCommitted" },
   );
+
+  if (replacedUrl) await destroyAsset(replacedUrl);
+  return snapshot;
 };
 
 export const removePortfolioImage = async (profileId, imageId) => {
-  return prisma.$transaction(
+  let removedUrl = null;
+
+  const snapshot = await prisma.$transaction(
     async (tx) => {
       await lockPhotoProfile(tx, profileId);
       const image = await tx.portfolioImage.findFirst({
         where: { id: imageId, profileId },
-        select: { id: true },
+        select: { id: true, url: true },
       });
       if (!image) {
         throw httpError(404, "IMAGE_NOT_FOUND", "Portfolio image not found.");
@@ -238,7 +290,9 @@ export const removePortfolioImage = async (profileId, imageId) => {
         where: { id: profileId },
         select: { status: true },
       });
-      const count = await tx.portfolioImage.count({ where: { profileId } });
+      const count = await tx.portfolioImage.count({
+        where: { profileId },
+      });
       if (["pending", "approved"].includes(profile.status) && count <= 1) {
         throw httpError(
           409,
@@ -247,8 +301,14 @@ export const removePortfolioImage = async (profileId, imageId) => {
         );
       }
       await tx.portfolioImage.delete({ where: { id: image.id } });
+      removedUrl = image.url;
       return photoSnapshot(tx, profileId, "portfolio");
     },
     { isolationLevel: "ReadCommitted" },
   );
+
+  // After the delete is saved, so a Cloudinary hiccup cannot undo it.
+  await destroyAsset(removedUrl);
+
+  return snapshot;
 };
