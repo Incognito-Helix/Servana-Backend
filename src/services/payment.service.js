@@ -1,5 +1,4 @@
 import prisma from "../config/prisma.js";
-import crypto from "crypto";
 import { createPendingBoost, quoteBoost } from "../services/boost.service.js";
 
 const PAYSTACK_URL = "https://api.paystack.co/transaction/initialize";
@@ -53,17 +52,8 @@ export const initializePayment = async (
   };
 
   const quote = await quoteBoost(request);
-  const boost = await createPendingBoost(request);
-  const reference = crypto.randomUUID().replace(/-/g, "");
-  const payment = await prisma.payment.create({
-    data: {
-      userId,
-      boostId: boost.id,
-      paystackReference: reference,
-      amountKobo: quote.totalPriceKobo,
-      currency: "NGN",
-    },
-  });
+  const { boost, payment } = await createPendingBoost(request);
+  const reference = payment.reference;
 
   let paystack;
 
