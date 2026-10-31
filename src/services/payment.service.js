@@ -51,7 +51,7 @@ export const initializePayment = async (
     zoneIds,
   };
 
-  const quote = await quoteBoost(request);
+  await quoteBoost(request);
   const { boost, payment } = await createPendingBoost(request);
   const reference = payment.reference;
 
